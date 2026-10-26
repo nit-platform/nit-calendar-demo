@@ -11,7 +11,7 @@ async function guarded(fn, ok, rerender) {
 }
 
 export async function renderHours(root, ctx) {
-  if (!ctx.staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted('אין ספרים.'))); return; }
+  if (!ctx.staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted('אין נותני שירות.'))); return; }
   if (!ctx.staff.some((s) => s.id === staffId)) staffId = ctx.staff[0].id;
   const [wh, offs] = await Promise.all([
     q(sb.from('working_hours').select('*').eq('staff_id', staffId).order('weekday').order('start_time')),
@@ -60,7 +60,7 @@ export async function renderHours(root, ctx) {
       period: `[${localToTs(f.from.value)},${localToTs(f.to.value)})` }).select('id')), 'ההיעדרות נוספה', rerender); });
 
   root.replaceChildren(
-    h('div', { class: 'card toolbar' }, h('label', { style: 'flex:1' }, 'ספר', h('select', { id: 'hours-staff', onchange: (e) => { staffId = e.target.value; rerender(); } },
+    h('div', { class: 'card toolbar' }, h('label', { style: 'flex:1' }, 'נותן שירות', h('select', { id: 'hours-staff', onchange: (e) => { staffId = e.target.value; rerender(); } },
       ctx.staff.map((s) => h('option', { value: s.id, selected: s.id === staffId }, s.display_name))))),
     hoursCard,
     h('div', { class: 'card', id: 'breaks-card' }, h('h2', {}, 'הפסקות קבועות (כל שבוע)'),
