@@ -56,3 +56,4 @@ input[type=checkbox]{width:20px;height:20px;padding:0}
 .item.overridden{opacity:.6;text-decoration:line-through}
 h3.sub{font-size:.95rem;margin:12px 0 6px}
 #appt-form{padding:18px;display:grid;gap:10px}
+.captcha{min-height:65px}

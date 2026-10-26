@@ -36,6 +36,7 @@
       <p class="or">או בקוד חד-פעמי למייל</p>
       <form id="otp-email-form">
         <label>מייל <input name="email" type="email" required autocomplete="email" dir="ltr"></label>
+        <div id="captcha" class="captcha"></div>
         <button class="btn primary" type="submit">שלחו לי קוד</button>
       </form>
       <form id="otp-code-form" class="hidden">
@@ -64,6 +65,7 @@
   <dialog id="appt-dialog"><form method="dialog" id="appt-form"></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <footer class="foot">NIT · ממשק ניהול. הגישה רק לחברי העסק.</footer>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
