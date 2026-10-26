@@ -38,7 +38,7 @@
       </form>
       <form id="otp-code-form" class="hidden">
         <p class="muted" id="otp-sent"></p>
-        <label>קוד בן 6 ספרות <input name="token" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" dir="ltr"></label>
+        <label>קוד <input name="token" required inputmode="numeric" pattern="[0-9]{6,8}" maxlength="8" autocomplete="one-time-code" dir="ltr"></label>
         <div class="actions">
           <button class="btn ghost" type="button" id="otp-back">מייל אחר</button>
           <button class="btn primary" type="submit">כניסה</button>
