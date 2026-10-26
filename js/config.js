@@ -4,3 +4,5 @@ export const SUPABASE_URL = 'https://txdubkiyaceyassjcizc.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4ZHVia2l5YWNleWFzc2pjaXpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTM5NDgsImV4cCI6MjEwODU2OTk0OH0.9vrNMG2lW-Ycdd660h9qeNt9aCez8_2Ls70n-n7k8jA';
 export const TIMEZONE = 'Asia/Jerusalem';
 export const DAYS_AHEAD = 14;
+// Cloudflare Turnstile public site key (owner email-OTP login). Public by design.
+export const TURNSTILE_SITE_KEY = '0x4AAAAAAFnF9X2tOtdv1I-n';
