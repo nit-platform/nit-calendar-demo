@@ -33,7 +33,7 @@ function describeSteps(steps) {
 
 function renderServices() {
   const box = $('#service-list');
-  if (!state.services.length) { box.replaceChildren(muted('לספר זה אין שירותים')); return; }
+  if (!state.services.length) { box.replaceChildren(muted('לנותן שירות זה אין שירותים')); return; }
   box.replaceChildren(...state.services.map((s) =>
     h('button', { class: 'svc', type: 'button', 'aria-pressed': String(s.service_id === state.serviceId),
                   onclick: () => { state.serviceId = s.service_id; renderServices(); loadSlots(); } },
