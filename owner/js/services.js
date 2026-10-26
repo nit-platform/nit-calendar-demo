@@ -1,7 +1,7 @@
 // Services + steps editor: durations, wait range, wait_duration_mode, allow_overlap, prices, active,
 // per-barber price/offer, and which services may be placed inside this service's wait.
 import { sb, q, heError } from './sb.js';
-import { h, muted, toast, shekel } from '../../js/ui.js';
+import { h, muted, toast, shekel, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 
 const num = (v) => (v === '' || v == null ? null : Number(v));
@@ -78,7 +78,7 @@ function serviceCard(svc, steps, offers, rules, ctx, rerender) {
     h('h3', { class: 'sub' }, 'שלבים'),
     h('div', { class: 'steps-tbl' }, (steps.length ? steps : [null]).map((s, i) => stepRow(s, i))),
     h('button', { type: 'button', class: 'btn small outline', onclick: (e) => { const t = e.target.previousElementSibling; t.append(stepRow(null, t.children.length)); } }, '+ שלב'),
-    h('h3', { class: 'sub' }, 'נותני שירות ומחיר אישי'),
+    h('h3', { class: 'sub' }, `${providerLabel(ctx.business)} – מחיר אישי`),
     h('div', { class: 'list' }, ctx.staff.map((st) => {
       const o = offers.find((x) => x.staff_id === st.id);
       return h('div', { class: 'row' }, check(st.display_name, { name: 'offer_' + st.id, checked: !!o || !svc }),

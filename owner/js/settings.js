@@ -1,6 +1,6 @@
 // Business details + per-business policies (all values live in the businesses / policies tables).
 import { sb, q, heError, hhmm } from './sb.js';
-import { h, toast } from '../../js/ui.js';
+import { h, toast, DEFAULT_PROVIDER_LABEL } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 
 // [column, label, type, extra]
@@ -31,11 +31,17 @@ export async function renderSettings(root, ctx) {
   const fields = POLICY_FIELDS.filter(([c]) => c in p);   // only columns that exist in this database
   const bizForm = h('form', { class: 'card', id: 'biz-form' }, h('h2', {}, 'פרטי העסק'),
     h('div', { class: 'row' }, h('label', {}, 'שם העסק', h('input', { name: 'name', value: b.name, required: true })),
-      h('label', {}, 'וואטסאפ', h('input', { name: 'phone_whatsapp', value: b.phone_whatsapp || '', dir: 'ltr', inputmode: 'tel' }))),
+      h('label', {}, 'וואטסאפ', h('input', { name: 'phone_whatsapp', value: b.phone_whatsapp || '', dir: 'ltr', inputmode: 'tel' })),
+      h('label', {}, 'כינוי לנותן שירות (למשל ספר, מטפלת)', h('input', { name: 'provider_label', id: 'provider-label', value: b.provider_label || '',
+        maxlength: 30, placeholder: DEFAULT_PROVIDER_LABEL, pattern: '[^<>]*', title: 'עד 30 תווים, ללא < או >' }))),
     h('div', { class: 'actions' }, h('button', { class: 'btn primary' }, 'שמירה')));
   bizForm.addEventListener('submit', async (e) => { e.preventDefault();
-    try { const [row] = await q(sb.from('businesses').update({ name: bizForm.name.value.trim(), phone_whatsapp: bizForm.phone_whatsapp.value.trim() || null }).eq('id', b.id).select('*'));
-      if (!row) throw new Error('permission denied'); Object.assign(ctx.business, row); document.querySelector('#biz-name').textContent = row.name; toast('נשמר'); }
+    const label = bizForm.provider_label.value.trim();
+    if (label.length > 30 || /[<>]/.test(label)) { toast('כינוי לנותן שירות: עד 30 תווים, ללא < או >', true); return; }
+    const patch = { name: bizForm.name.value.trim(), phone_whatsapp: bizForm.phone_whatsapp.value.trim() || null };
+    if ((label || null) !== (b.provider_label ?? null)) patch.provider_label = label || null;   // only owners may change it (DB-enforced)
+    try { const [row] = await q(sb.from('businesses').update(patch).eq('id', b.id).select('*'));
+      if (!row) throw new Error('permission denied'); Object.assign(ctx.business, row); document.querySelector('#biz-name').textContent = row.name; bizForm.provider_label.value = row.provider_label || ''; toast('נשמר'); }
     catch (err) { toast(heError(err), true); } });
 
   const polForm = h('form', { class: 'card', id: 'policy-form' }, h('h2', {}, 'כללי הזמנה ויומן'),

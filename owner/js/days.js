@@ -1,6 +1,6 @@
 // Special days: Israeli-calendar holidays (override = open as usual), manual closed days / special hours.
 import { sb, q, heError, hhmm } from './sb.js';
-import { h, muted, toast } from '../../js/ui.js';
+import { h, muted, toast, providerLabel } from '../../js/ui.js';
 import { todayISO, fmtLongDate } from '../../js/time.js';
 
 const KIND = { holiday: 'חג (סגור)', eve: 'ערב חג (קיצור שעות)', closed: 'סגור', special_hours: 'שעות מיוחדות' };
@@ -43,7 +43,7 @@ export async function renderDays(root, ctx) {
   const manual = days.filter((d) => d.source === 'manual'), cal = days.filter((d) => d.source === 'israeli_calendar');
   root.replaceChildren(
     h('div', { class: 'card' }, h('h2', {}, 'הוספת יום מיוחד'), form,
-      h('p', { class: 'muted' }, 'יום ידני גובר על חג מהלוח. יום של נותן שירות מסוים גובר על יום של כל העסק.')),
+      h('p', { class: 'muted' }, `יום ידני גובר על חג מהלוח. יום של ${providerLabel(ctx.business)} מסוים גובר על יום של כל העסק.`)),
     h('div', { class: 'card', id: 'manual-days' }, h('h2', {}, 'ימים ידניים'), h('div', { class: 'list' }, manual.length ? manual.map(item) : muted('אין'))),
     h('div', { class: 'card', id: 'calendar-days' }, h('h2', {}, 'חגים מלוח השנה'),
       h('p', { class: 'muted' }, ctx.policies.auto_holidays ? 'מתעדכן אוטומטית מ-Hebcal. סמנו "פתוח כרגיל" כדי לבטל חג.' : 'סנכרון חגים כבוי (בהגדרות).'),

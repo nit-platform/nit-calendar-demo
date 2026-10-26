@@ -1,6 +1,7 @@
 // Supabase client for the owner dashboard: anon key + the signed-in user's Auth session (JWT).
 // Every read/write below is filtered by RLS (business_members). No service-role key anywhere.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// supabase-js 2.118.0 is loaded by a pinned <script> with an SRI hash in the HTML (sets window.supabase).
+const { createClient } = window.supabase;
 import { SUPABASE_URL, SUPABASE_ANON_KEY, TIMEZONE } from '../../js/config.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

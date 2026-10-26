@@ -1,6 +1,6 @@
 // Daily + weekly calendar per barber, from owner_day_view (wait steps + appointments placed inside them).
 import { sb, q, rpc, heError, parseRange, hhmm } from './sb.js';
-import { $, h, muted, toast } from '../../js/ui.js';
+import { $, h, muted, toast, providerLabel } from '../../js/ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, minutesOfDay, hhmmToMin, minToHHMM } from '../../js/time.js';
 
 const st = { staffId: null, date: todayISO(), mode: 'day' };
@@ -118,14 +118,14 @@ async function renderWeek(box, ctx) {
 
 export async function renderCalendar(root, ctx) {
   const staff = ctx.staff.filter((s) => s.is_active);
-  if (!staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted('אין נותני שירות פעילים.'))); return; }
+  if (!staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted(`אין אף ${providerLabel(ctx.business)} פעיל.`))); return; }
   if (!staff.some((s) => s.id === st.staffId)) st.staffId = staff[0].id;
   const body = h('div', {});
   const rerender = () => renderCalendar(root, ctx);
   const step = st.mode === 'week' ? 7 : 1;
   root.replaceChildren(
     h('div', { class: 'card toolbar' },
-      h('select', { id: 'cal-staff', 'aria-label': 'נותן שירות', onchange: (e) => { st.staffId = e.target.value; rerender(); } },
+      h('select', { id: 'cal-staff', 'aria-label': providerLabel(ctx.business), onchange: (e) => { st.staffId = e.target.value; rerender(); } },
         staff.map((s) => h('option', { value: s.id, selected: s.id === st.staffId }, s.display_name))),
       h('div', { class: 'seg' }, ['day', 'week'].map((m) => h('button', { 'aria-pressed': String(st.mode === m), id: 'mode-' + m,
         onclick: () => { st.mode = m; rerender(); } }, m === 'day' ? 'יום' : 'שבוע'))),
