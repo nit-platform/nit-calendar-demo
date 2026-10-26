@@ -1,5 +1,6 @@
 // Owner dashboard entry: auth (email OTP / Google), business context, tabs.
 import { sb, q, rpc, heError, ownerUrl } from './sb.js';
+import { initCaptcha, captchaToken, resetCaptcha } from './captcha.js';
 import { $, toast } from '../../js/ui.js';
 import { renderCalendar } from './calendar.js';
 import { renderServices } from './services.js';
@@ -25,6 +26,7 @@ export async function reloadContext() {
 // ---------- login ----------
 let otpEmail = '';
 const loginErr = (m) => { $('#login-error').textContent = m || ''; };
+initCaptcha($('#captcha'));
 $('#login-google').addEventListener('click', async () => {
   loginErr();
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: ownerUrl() } });
@@ -33,10 +35,12 @@ $('#login-google').addEventListener('click', async () => {
 $('#otp-email-form').addEventListener('submit', async (e) => {
   e.preventDefault(); loginErr();
   otpEmail = new FormData(e.target).get('email').trim().toLowerCase();
-  const btn = e.target.querySelector('button'); btn.disabled = true;
+  const captcha = captchaToken();
+  if (!captcha) return loginErr('יש להשלים את בדיקת האבטחה (אני לא רובוט) ולנסות שוב.');
+  const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
   // shouldCreateUser: a new address gets an account, but sees nothing until it has an invite/membership.
-  const { error } = await sb.auth.signInWithOtp({ email: otpEmail, options: { shouldCreateUser: true } });
-  btn.disabled = false;
+  const { error } = await sb.auth.signInWithOtp({ email: otpEmail, options: { shouldCreateUser: true, captchaToken: captcha } });
+  btn.disabled = false; resetCaptcha();   // Turnstile tokens are single-use
   if (error) return loginErr(heError(error));
   $('#otp-sent').textContent = `שלחנו קוד וקישור כניסה אל ${otpEmail}`;
   $('#otp-email-form').classList.add('hidden'); $('#otp-code-form').classList.remove('hidden');
