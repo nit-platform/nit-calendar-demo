@@ -38,7 +38,7 @@ $('#otp-email-form').addEventListener('submit', async (e) => {
   const { error } = await sb.auth.signInWithOtp({ email: otpEmail, options: { shouldCreateUser: true } });
   btn.disabled = false;
   if (error) return loginErr(heError(error));
-  $('#otp-sent').textContent = `שלחנו קוד בן 6 ספרות אל ${otpEmail}`;
+  $('#otp-sent').textContent = `שלחנו קוד וקישור כניסה אל ${otpEmail}`;
   $('#otp-email-form').classList.add('hidden'); $('#otp-code-form').classList.remove('hidden');
   $('#otp-code-form [name=token]').focus();
 });
