@@ -1,7 +1,7 @@
 // Booking flow for ONE barber (from the URL slug): service -> date -> free/busy grid -> dialog (name + phone) -> demo_book.
 // Privacy: the page only learns whether a time is free; busy times carry no name, service or other detail.
 import { api, friendlyError } from './api.js';
-import { $, h, muted, toast, shekel } from './ui.js';
+import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 
@@ -33,7 +33,7 @@ function describeSteps(steps) {
 
 function renderServices() {
   const box = $('#service-list');
-  if (!state.services.length) { box.replaceChildren(muted('לנותן שירות זה אין שירותים')); return; }
+  if (!state.services.length) { box.replaceChildren(muted(`ל${providerLabel(state.barber)} זה אין שירותים`)); return; }
   box.replaceChildren(...state.services.map((s) =>
     h('button', { class: 'svc', type: 'button', 'aria-pressed': String(s.service_id === state.serviceId),
                   onclick: () => { state.serviceId = s.service_id; renderServices(); loadSlots(); } },

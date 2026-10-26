@@ -19,3 +19,7 @@ export function toast(msg, isError = false) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
 }
 export const shekel = (n) => `₪${Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
+
+/** Business-chosen name for a service provider (e.g. 'ספר', 'מטפלת'); defaults to 'נותן שירות'. Plain text only. */
+export const DEFAULT_PROVIDER_LABEL = 'נותן שירות';
+export const providerLabel = (b) => (typeof b?.provider_label === 'string' && b.provider_label.trim()) || DEFAULT_PROVIDER_LABEL;

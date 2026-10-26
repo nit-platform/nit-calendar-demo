@@ -1,6 +1,7 @@
 // Data layer: the ONLY module that talks to Supabase. The future owner dashboard can swap
 // demo_* RPCs for authenticated ones (get_available_slots / book_appointment / owner_day_view) here.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// supabase-js 2.118.0 is loaded by a pinned <script> with an SRI hash in the HTML (sets window.supabase).
+const { createClient } = window.supabase;
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
