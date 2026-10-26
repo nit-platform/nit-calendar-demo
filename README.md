@@ -18,11 +18,14 @@ Seeded demo pages: `/b/avi` and `/b/dani`.
 - `js/config.js`: Supabase URL, anon key (public-safe), timezone, days ahead
 - `js/router.js`: reads the slug from the path, `?b=` or `#/b/`, and canonicalizes the URL
 - `js/api.js`: RPC wrappers plus Hebrew error messages
-- `js/main.js`, `js/booking.js`, `js/dayview.js`, `js/time.js`, `js/ui.js`
+- `js/main.js`, `js/booking.js`, `js/time.js`, `js/ui.js`
 
 ## RPCs (anon, SECURITY DEFINER, is_demo only, by slug)
 `demo_barber(slug)`, `demo_list_services(slug)`, `demo_slots(slug, service, date)`,
-`demo_book(slug, service, starts_at, name, phone)`, `demo_day_view(slug, date)`, `demo_day_hours(slug, date)`.
+`demo_slot_grid(slug, service, date)`, `demo_book(slug, service, starts_at, name, phone)`.
+
+**Privacy:** a customer sees only free and busy times. Busy slots are greyed out and can't be clicked, and they carry no name, service or other detail.
+Dead-time slots are still highlighted. The full day calendar (`owner_day_view`) is for authenticated business members only, and this page doesn't use it.
 - An unknown slug, or a slug belonging to a non-demo shop, returns HTTP 404 (`PT404`).
 - Rate limits return HTTP 429 (`PT429`).
 - Invalid input returns 400.

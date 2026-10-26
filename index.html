@@ -12,10 +12,6 @@
     <h1 id="barber-title">NIT <span>יומן חכם למספרה</span></h1>
     <p class="biz" id="biz-name"></p>
     <p class="demo-badge">גרסת הדגמה · נתונים לדוגמה בלבד</p>
-    <nav class="tabs" role="tablist">
-      <button role="tab" class="tab active" data-view="book" aria-selected="true">קביעת תור</button>
-      <button role="tab" class="tab" data-view="day" aria-selected="false">יומן יומי</button>
-    </nav>
   </header>
 
   <main>
@@ -37,31 +33,14 @@
           <div id="date-strip" class="date-strip"></div>
         </li>
         <li class="card">
-          <h2><span class="num">3</span> שעות פנויות</h2>
-          <p class="legend"><span class="dot fill"></span> משבצת "זמן מת" – נכנסת בזמן ההמתנה של לקוח אחר (מומלץ!)</p>
+          <h2><span class="num">3</span> בחירת שעה</h2>
+          <p class="legend"><span class="dot fill"></span> משבצת "זמן מת" – נכנסת בזמן המתנה ביומן (מומלץ!)
+            <span class="dot busy"></span> תפוס</p>
           <div id="slots" aria-live="polite"><p class="muted">בחרו שירות ותאריך</p></div>
         </li>
       </ol>
     </section>
 
-    <section id="view-day" class="view hidden" aria-label="יומן יומי">
-      <div class="card">
-        <div class="day-controls">
-          <div class="date-row">
-            <button class="icon-btn" id="day-prev" aria-label="יום קודם">›</button>
-            <input type="date" id="day-date">
-            <button class="icon-btn" id="day-next" aria-label="יום הבא">‹</button>
-          </div>
-        </div>
-        <p class="legend">
-          <span class="dot work"></span> עבודה
-          <span class="dot wait"></span> המתנה (הספר פנוי)
-          <span class="dot fill"></span> תור בתוך המתנה
-          <span class="dot buffer"></span> מרווח
-        </p>
-        <div id="timeline" class="timeline" aria-live="polite"></div>
-      </div>
-    </section>
   </main>
 
   <dialog id="book-dialog">
