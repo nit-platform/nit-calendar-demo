@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>NIT – ניהול העסק</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="owner.css">
+</head>
+<body>
+  <header class="top">
+    <h1>NIT <span>ניהול העסק</span></h1>
+    <p class="biz" id="biz-name"></p>
+    <div class="top-row">
+      <p class="demo-badge" id="who"></p>
+      <button class="btn link hidden" id="logout">התנתקות</button>
+    </div>
+    <nav id="tabs" class="tabs hidden" role="tablist">
+      <button role="tab" data-tab="calendar" aria-selected="true">יומן</button>
+      <button role="tab" data-tab="services">שירותים</button>
+      <button role="tab" data-tab="hours">שעות והפסקות</button>
+      <button role="tab" data-tab="days">ימים מיוחדים</button>
+      <button role="tab" data-tab="settings">הגדרות</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-loading" class="view"><div class="card"><p class="muted">טוען…</p></div></section>
+
+    <section id="view-login" class="view hidden"><div class="card login">
+      <h2>כניסה לבעלי עסקים</h2>
+      <button class="btn google" id="login-google" type="button">כניסה עם Google</button>
+      <p class="or">או בקוד חד-פעמי למייל</p>
+      <form id="otp-email-form">
+        <label>מייל <input name="email" type="email" required autocomplete="email" dir="ltr"></label>
+        <button class="btn primary" type="submit">שלחו לי קוד</button>
+      </form>
+      <form id="otp-code-form" class="hidden">
+        <p class="muted" id="otp-sent"></p>
+        <label>קוד בן 6 ספרות <input name="token" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" dir="ltr"></label>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="otp-back">מייל אחר</button>
+          <button class="btn primary" type="submit">כניסה</button>
+        </div>
+      </form>
+      <p class="form-error" id="login-error" role="alert"></p>
+    </div></section>
+
+    <section id="view-nobiz" class="view hidden"><div class="card">
+      <h2>אין לך הרשאה לעסק</h2>
+      <p class="muted">החשבון הזה מחובר, אבל הוא לא משויך לאף עסק. בקשו מבעל העסק להוסיף את כתובת המייל שלכם.</p>
+    </div></section>
+
+    <section id="view-calendar" class="view tab-view hidden"></section>
+    <section id="view-services" class="view tab-view hidden"></section>
+    <section id="view-hours" class="view tab-view hidden"></section>
+    <section id="view-days" class="view tab-view hidden"></section>
+    <section id="view-settings" class="view tab-view hidden"></section>
+  </main>
+
+  <dialog id="appt-dialog"><form method="dialog" id="appt-form"></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <footer class="foot">NIT · ממשק ניהול. הגישה רק לחברי העסק.</footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
