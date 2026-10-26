@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><title>NIT</title>
+<script>
+  // GitHub Pages SPA trick: /<base>/b/<slug> has no file, so Pages serves this 404.html.
+  // Redirect to /<base>/?b=<slug>; index.html then restores the pretty /b/<slug> URL.
+  (function () {
+    var p = location.pathname, i = p.indexOf('/b/');
+    if (i >= 0) {
+      var slug = p.slice(i + 3).split('/')[0];
+      location.replace(p.slice(0, i + 1) + '?b=' + encodeURIComponent(slug) + location.hash);
+    }
+  })();
+</script></head>
+<body style="font-family:system-ui;text-align:center;padding:40px">הדף לא נמצא</body></html>

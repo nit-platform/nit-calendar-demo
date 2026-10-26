@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NIT – הדגמת יומן חכם למספרה</title>
+  <meta name="description" content="הדגמה: קביעת תור חכמה עם ניצול זמני המתנה">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1 id="barber-title">NIT <span>יומן חכם למספרה</span></h1>
+    <p class="biz" id="biz-name"></p>
+    <p class="demo-badge">גרסת הדגמה · נתונים לדוגמה בלבד</p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" class="tab active" data-view="book" aria-selected="true">קביעת תור</button>
+      <button role="tab" class="tab" data-view="day" aria-selected="false">יומן יומי</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-missing" class="view hidden"><div class="card"><h2>הדף לא נמצא</h2>
+      <p class="muted">לכל ספר יש קישור אישי משלו (למשל <bdi dir="ltr">…/b/avi</bdi>). בקשו מהספר את הקישור שלו.</p></div></section>
+    <section id="view-book" class="view" aria-label="קביעת תור">
+      <ol class="steps">
+        <li class="card">
+          <h2><span class="num">1</span> בחירת שירות</h2>
+          <div id="service-list" class="services"><p class="muted">טוען…</p></div>
+        </li>
+        <li class="card">
+          <h2><span class="num">2</span> בחירת תאריך</h2>
+          <div class="date-row">
+            <button class="icon-btn" id="date-prev" aria-label="יום קודם">›</button>
+            <input type="date" id="date-input">
+            <button class="icon-btn" id="date-next" aria-label="יום הבא">‹</button>
+          </div>
+          <div id="date-strip" class="date-strip"></div>
+        </li>
+        <li class="card">
+          <h2><span class="num">3</span> שעות פנויות</h2>
+          <p class="legend"><span class="dot fill"></span> משבצת "זמן מת" – נכנסת בזמן ההמתנה של לקוח אחר (מומלץ!)</p>
+          <div id="slots" aria-live="polite"><p class="muted">בחרו שירות ותאריך</p></div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="view-day" class="view hidden" aria-label="יומן יומי">
+      <div class="card">
+        <div class="day-controls">
+          <div class="date-row">
+            <button class="icon-btn" id="day-prev" aria-label="יום קודם">›</button>
+            <input type="date" id="day-date">
+            <button class="icon-btn" id="day-next" aria-label="יום הבא">‹</button>
+          </div>
+        </div>
+        <p class="legend">
+          <span class="dot work"></span> עבודה
+          <span class="dot wait"></span> המתנה (הספר פנוי)
+          <span class="dot fill"></span> תור בתוך המתנה
+          <span class="dot buffer"></span> מרווח
+        </p>
+        <div id="timeline" class="timeline" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="book-dialog">
+    <form id="book-form" method="dialog">
+      <h2>אישור תור</h2>
+      <div id="book-summary" class="summary"></div>
+      <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
+      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="[0-9+\-\s]{9,16}" dir="ltr"></label>
+      <p class="form-error" id="book-error" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="book-cancel">ביטול</button>
+        <button type="submit" class="btn primary" id="book-submit">קבע תור</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <footer class="foot">NIT · הדגמה. אין לשתף פרטים אמיתיים.</footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
