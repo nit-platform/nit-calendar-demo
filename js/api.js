@@ -1,5 +1,5 @@
 // Data layer: the ONLY module that talks to Supabase. The future owner dashboard can swap
-// demo_* RPCs for authenticated ones (get_available_slots / book_appointment) here.
+// demo_* RPCs for authenticated ones (get_available_slots / book_appointment / owner_day_view) here.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
@@ -32,10 +32,9 @@ async function rpc(name, params) {
 export const api = {
   barber: async (slug) => (await rpc('demo_barber', { p_slug: slug }))[0] ?? null,
   listServices: (slug) => rpc('demo_list_services', { p_slug: slug }),
-  slots: (slug, serviceId, date) => rpc('demo_slots', { p_slug: slug, p_service_id: serviceId, p_date: date }),
+  // Every grid start time of the day: { slot_start, slot_end, available, is_dead_time_fill }. Free/busy only.
+  slotGrid: (slug, serviceId, date) => rpc('demo_slot_grid', { p_slug: slug, p_service_id: serviceId, p_date: date }),
   book: ({ slug, serviceId, startsAt, name, phone }) =>
     rpc('demo_book', { p_slug: slug, p_service_id: serviceId, p_starts_at: startsAt,
                        p_customer_name: name, p_phone: phone }),
-  dayView: (slug, date) => rpc('demo_day_view', { p_slug: slug, p_date: date }),
-  dayHours: (slug, date) => rpc('demo_day_hours', { p_slug: slug, p_date: date }),
 };

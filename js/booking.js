@@ -1,14 +1,14 @@
-// Booking flow for ONE barber (from the URL slug): service -> date -> slots -> dialog (name + phone) -> demo_book.
+// Booking flow for ONE barber (from the URL slug): service -> date -> free/busy grid -> dialog (name + phone) -> demo_book.
+// Privacy: the page only learns whether a time is free; busy times carry no name, service or other detail.
 import { api, friendlyError } from './api.js';
 import { $, h, muted, toast, shekel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 
 const state = { slug: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
-let onBooked = () => {};
 
-export async function initBooking({ slug, barber, onBookedCb }) {
-  state.slug = slug; state.barber = barber; onBooked = onBookedCb || onBooked;
+export async function initBooking({ slug, barber }) {
+  state.slug = slug; state.barber = barber;
   loadServices();
   const di = $('#date-input');
   di.min = todayISO(); di.max = addDays(todayISO(), DAYS_AHEAD); di.value = state.date;
@@ -62,9 +62,9 @@ export async function loadSlots() {
   const box = $('#slots');
   if (!state.serviceId) return;
   const my = ++slotReq;
-  box.replaceChildren(muted('מחפש שעות פנויות…'));
+  box.replaceChildren(muted('טוען שעות…'));
   try {
-    const rows = await api.slots(state.slug, state.serviceId, state.date);
+    const rows = await api.slotGrid(state.slug, state.serviceId, state.date);
     if (my !== slotReq) return;               // a newer request superseded this one
     renderSlots(rows);
   } catch (e) { if (my === slotReq) box.replaceChildren(muted(friendlyError(e))); }
@@ -72,17 +72,23 @@ export async function loadSlots() {
 
 function renderSlots(rows) {
   const box = $('#slots');
-  if (!rows.length) { box.replaceChildren(muted(`אין שעות פנויות ב${fmtLongDate(state.date)}`)); return; }
-  const fills = rows.filter((r) => r.is_dead_time_fill);
-  const normal = rows.filter((r) => !r.is_dead_time_fill).sort((a, b) => a.slot_start.localeCompare(b.slot_start));
-  const btn = (r) => h('button', { class: 'slot' + (r.is_dead_time_fill ? ' fill' : ''), type: 'button',
-    'aria-label': `${fmtTime(r.slot_start)}${r.is_dead_time_fill ? ' – בזמן המתנה' : ''}`, onclick: () => openDialog(r) },
-    fmtTime(r.slot_start));
+  if (!rows.some((r) => r.available)) {
+    box.replaceChildren(muted(rows.length ? `אין שעות פנויות ב${fmtLongDate(state.date)}` : `אין קבלת קהל ב${fmtLongDate(state.date)}`));
+    return;
+  }
+  const fills = rows.filter((r) => r.available && r.is_dead_time_fill);
+  const rest = rows.filter((r) => !(r.available && r.is_dead_time_fill)).sort((a, b) => a.slot_start.localeCompare(b.slot_start));
+  const btn = (r) => r.available
+    ? h('button', { class: 'slot' + (r.is_dead_time_fill ? ' fill' : ''), type: 'button',
+        'aria-label': `${fmtTime(r.slot_start)}${r.is_dead_time_fill ? ' – בזמן המתנה' : ''}`, onclick: () => openDialog(r) },
+        fmtTime(r.slot_start))
+    : h('button', { class: 'slot busy', type: 'button', disabled: '', 'aria-disabled': 'true',
+        'aria-label': `${fmtTime(r.slot_start)} – תפוס` }, fmtTime(r.slot_start));
   const parts = [];
   if (fills.length) parts.push(h('div', { class: 'slot-group fill-group' },
-    h('h3', {}, '⭐ מומלץ – נכנס בזמן ההמתנה של לקוח אחר'), h('div', { class: 'slot-grid' }, fills.map(btn))));
+    h('h3', {}, '⭐ מומלץ – נכנס בזמן המתנה ביומן'), h('div', { class: 'slot-grid' }, fills.map(btn))));
   const by = { 'בוקר': [], 'צהריים': [], 'ערב': [] };
-  for (const r of normal) { const hr = Number(fmtTime(r.slot_start).slice(0, 2)); by[hr < 12 ? 'בוקר' : hr < 16 ? 'צהריים' : 'ערב'].push(r); }
+  for (const r of rest) { const hr = Number(fmtTime(r.slot_start).slice(0, 2)); by[hr < 12 ? 'בוקר' : hr < 16 ? 'צהריים' : 'ערב'].push(r); }
   for (const [label, list] of Object.entries(by)) if (list.length)
     parts.push(h('div', { class: 'slot-group' }, h('h3', {}, label), h('div', { class: 'slot-grid' }, list.map(btn))));
   box.replaceChildren(...parts);
@@ -95,7 +101,7 @@ function openDialog(slot) {
     h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.barber.display_name)),
     h('div', {}, `${fmtLongDate(state.date)}, `, h('bdi', { dir: 'ltr' }, `${fmtTime(slot.slot_start)}–${fmtTime(slot.slot_end)}`)),
     h('div', {}, `מחיר: ${shekel(svc.price)}`),
-    slot.is_dead_time_fill ? h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה של לקוח אחר')) : null);
+    slot.is_dead_time_fill ? h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה ביומן')) : null);
   $('#book-error').textContent = '';
   $('#book-dialog').showModal();
   $('#book-form').elements.name.focus();
@@ -113,7 +119,6 @@ async function submitBooking(ev) {
     $('#book-dialog').close();
     toast(`התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
     loadSlots();
-    onBooked({ date: state.date });
   } catch (e) {
     $('#book-error').textContent = friendlyError(e);
     if ((e.message || '').includes('slot not available')) loadSlots();

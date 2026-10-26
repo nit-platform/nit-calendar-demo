@@ -3,21 +3,11 @@ import { api, friendlyError } from './api.js';
 import { $, muted } from './ui.js';
 import { getSlug, canonicalize } from './router.js';
 import { initBooking } from './booking.js';
-import { initDayView, showDay, load as loadDay } from './dayview.js';
 
-const views = { book: $('#view-book'), day: $('#view-day'), missing: $('#view-missing') };
-let dayLoaded = false;
+// Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
+function show(name) { for (const id of ['view-book', 'view-missing']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
 
-function switchTo(name) {
-  for (const [k, el] of Object.entries(views)) el.classList.toggle('hidden', k !== name);
-  document.querySelectorAll('.tab').forEach((t) => {
-    const on = t.dataset.view === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on));
-  });
-  if (name === 'day' && !dayLoaded) { dayLoaded = true; loadDay(); }
-  if (name !== 'missing') history.replaceState(null, '', location.pathname + location.search + (name === 'day' ? '#day' : ''));
-}
-
-function notFound() { $('.tabs').classList.add('hidden'); switchTo('missing'); document.title = 'NIT – הדף לא נמצא'; }
+function notFound() { show('missing'); document.title = 'NIT – הדף לא נמצא'; }
 
 async function start() {
   const slug = getSlug();
@@ -31,10 +21,8 @@ async function start() {
   $('#barber-title').replaceChildren(barber.display_name, Object.assign(document.createElement('span'), { textContent: 'קביעת תור' }));
   $('#biz-name').textContent = barber.business_name;
   document.title = `${barber.display_name} · ${barber.business_name} – קביעת תור`;
-  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => switchTo(t.dataset.view)));
-  initDayView({ slug });
-  await initBooking({ slug, barber, onBookedCb: (ctx) => { dayLoaded = true; showDay(ctx); } });
-  if (location.hash === '#day') switchTo('day');
+  show('book');
+  await initBooking({ slug, barber });
 }
 start();
 
