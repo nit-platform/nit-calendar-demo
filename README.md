@@ -27,7 +27,9 @@ Seeded pages: `?b=nit-demo` (demo business), plus legacy provider pages `/b/avi`
 Business link (any business, by its public slug; staff must belong to that business, otherwise `PT404`):
 `public_business(slug)` → name, timezone, provider label, slug, active staff (id + display name only),
 `public_list_services(slug, staff_id)`, `public_slot_grid(slug, staff_id, service, date)`,
-`public_book(slug, staff_id, service, starts_at, name, phone)`. Rate limits are per business.
+`public_book(slug, staff_id, service, starts_at, name, phone)`.
+If the owner turns off "customers choose provider" (`businesses.customers_choose_provider`, migration 000012), the page shows no staff names, `public_business` returns no staff list, and `staff_id` is null: the first free active staff is assigned server-side (race-safe).
+Rate limits (migration 000012): per phone per business per day; per client IP (salted SHA-256 of the first `X-Forwarded-For` entry, hash only) 5 per 10 minutes and 20 per day across businesses; requests without an IP share a per-business "unknown" bucket (10 / 10 min, 30 / day); plus per-business minute/hour caps. Events older than 7 days are purged nightly by pg_cron.
 
 Legacy demo (is_demo only, by staff slug):
 `demo_barber(slug)`, `demo_list_services(slug)`, `demo_slots(slug, service, date)`,
