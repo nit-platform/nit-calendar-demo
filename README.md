@@ -29,7 +29,7 @@ Business link (any business, by its public slug; staff must belong to that busin
 `public_list_services(slug, staff_id)`, `public_slot_grid(slug, staff_id, service, date)`,
 `public_book(slug, staff_id, service, starts_at, name, phone)`.
 If the owner turns off "customers choose provider" (`businesses.customers_choose_provider`, migration 000012), the page shows no staff names, `public_business` returns no staff list, and `staff_id` is null: the first free active staff is assigned server-side (race-safe).
-Rate limits (migration 000012): per phone per business per day; per client IP (salted SHA-256 of the first `X-Forwarded-For` entry, hash only) 5 per 10 minutes and 20 per day across businesses; requests without an IP share a per-business "unknown" bucket (10 / 10 min, 30 / day); plus per-business minute/hour caps. Events older than 7 days are purged nightly by pg_cron.
+Rate limits (migration 000012): per phone per business per day; per client IP (salted SHA-256 of `cf-connecting-ip` since migration 000015 – set by Cloudflare, not spoofable; hash only) 5 per 10 minutes and 20 per day across businesses; requests without an IP share a per-business "unknown" bucket (10 / 10 min, 30 / day); plus per-business minute/hour caps. Events older than 7 days are purged nightly by pg_cron.
 
 Legacy demo (is_demo only, by staff slug):
 `demo_barber(slug)`, `demo_list_services(slug)`, `demo_slots(slug, service, date)`,
@@ -67,3 +67,5 @@ URL: `https://nit-platform.github.io/nit-calendar-demo/owner/`. A static page (s
   - Offer page `?b=<slug>&offer=<token>` with accept/decline.
   - "ההודעות שלי" inbox: polls every 30 seconds and when the tab becomes visible. Its access tokens are kept in `localStorage` (`nit-access:<slug>`).
 - Owner `owner/js/waitlist.js`: waiting entries, offers (copy the offer link), customers blocked for no-shows (owner-only reset), and recent in-app messages. The settings tab has reminders, quiet hours and waitlist settings, and is read-only for non-owners.
+
+Waitlist Turnstile (migration 000015): with `WAITLIST_VIA_FUNCTION = true` in `js/config.js`, the join dialog loads the Turnstile script on demand (`js/wl-captcha.js`, site key `TURNSTILE_SITE_KEY`) and posts to `/functions/v1/waitlist-join` (same supabase.co host, already in CSP `connect-src`). It ships `false` (legacy direct RPC) until the secrets are set and the server flag `turnstile_required` is switched on.
