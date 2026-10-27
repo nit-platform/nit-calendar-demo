@@ -21,6 +21,20 @@ const ERRORS = {
   'too many bookings from this device, try later': 'יותר מדי הזמנות מהמכשיר הזה. נסו שוב בעוד כמה דקות.',
   'too many bookings from this device today': 'הגעתם למספר ההזמנות המרבי להיום מהמכשיר הזה. נסו שוב מחר.',
   'customer not found, deleted or blocked': 'לא ניתן לקבוע תור ללקוח זה.',
+  // waitlist (000013)
+  'waitlist disabled': 'רשימת ההמתנה של העסק סגורה כרגע.',
+  'already on waitlist': 'כבר נרשמתם לרשימת ההמתנה לתאריכים האלה.',
+  'too many waitlist entries': 'אפשר להירשם לעד 3 רשימות המתנה במקביל.',
+  'invalid dates': 'טווח תאריכים לא תקין (עד 14 יום, מהיום והלאה).',
+  'invalid time window': 'טווח שעות לא תקין.',
+  'service not found': 'השירות לא נמצא.',
+  'too many waitlist requests for this phone today': 'הגעתם למספר ההרשמות המרבי להיום מהטלפון הזה.',
+  'too many waitlist requests from this device, try later': 'יותר מדי הרשמות מהמכשיר הזה. נסו שוב בעוד כמה דקות.',
+  'too many waitlist requests from this device today': 'הגעתם למספר ההרשמות המרבי להיום מהמכשיר הזה.',
+  'too many waitlist requests, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
+  'too many waitlist requests, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
+  'too many attempts, try later': 'יותר מדי ניסיונות. נסו שוב מאוחר יותר.',
+  'invalid input': 'הבקשה לא תקינה.',
 };
 export function friendlyError(err) {
   const m = (err && (err.message || String(err))) || '';
@@ -54,4 +68,12 @@ export const api = {
                            p_customer_name: name, p_phone: phone })
     : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
                          p_customer_name: name, p_phone: phone }),
+  // waitlist + in-app inbox (business links only). Tokens are random, stored hashed server-side.
+  waitlistJoin: ({ slug, staffId, serviceId, from, to, timeFrom, timeTo, name, phone, token }) => rpc('public_waitlist_join', {
+    p_slug: slug, p_staff_id: staffId, p_service_id: serviceId, p_date_from: from, p_date_to: to,
+    p_time_from: timeFrom || null, p_time_to: timeTo || null, p_customer_name: name, p_phone: phone, p_access_token: token || null }),
+  waitlistCancel: (slug, token, entryId) => rpc('public_waitlist_cancel', { p_slug: slug, p_token: token, p_entry_id: entryId }),
+  inbox: (slug, tokens) => rpc('public_inbox', { p_slug: slug, p_tokens: tokens }),
+  offer: (slug, token) => rpc('public_offer', { p_slug: slug, p_token: token }),
+  offerRespond: (slug, token, accept) => rpc('public_offer_respond', { p_slug: slug, p_token: token, p_accept: accept }),
 };

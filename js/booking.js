@@ -4,6 +4,7 @@ import { api, friendlyError } from './api.js';
 import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
+import { addToken, renderInbox } from './waitlist.js';
 
 const state = { scope: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
 
@@ -18,6 +19,13 @@ export async function initBooking({ scope, barber }) {
   renderDateStrip();
   $('#book-cancel').addEventListener('click', () => $('#book-dialog').close());
   $('#book-form').addEventListener('submit', submitBooking);
+}
+
+/** Current choice, for the waitlist dialog. */
+export function selection() {
+  const svc = state.services.find((s) => s.service_id === state.serviceId);
+  return { staffId: state.scope?.staffId ?? null, serviceId: state.serviceId, date: state.date,
+           label: svc ? `${svc.name}${state.barber?.display_name ? ` אצל ${state.barber.display_name}` : ''}` : '' };
 }
 
 /** Business link: switch to another provider of the same business. */
@@ -136,6 +144,7 @@ async function submitBooking(ev) {
                                  startsAt: state.pending.slot_start, name, phone });
     $('#book-dialog').close();
     toast(`התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
+    if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
     loadSlots();
   } catch (e) {
     $('#book-error').textContent = friendlyError(e);
