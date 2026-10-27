@@ -70,3 +70,10 @@ html,body{overflow-x:hidden}
 .manage-note{margin:12px 0;border:1px solid #c5e1a5;background:#f1f8e9}
 .manage-note a{font-weight:700}
 .st-pending{opacity:.85;outline:2px dashed #f0a000}
+
+/* customer Google auth */
+.auth-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+.auth-bar.hidden{display:none}
+.auth-user{font-size:.85rem;opacity:.9}
+.muted.small{font-size:.85rem}
+#book-auth-note:not(.hidden){margin:0}
