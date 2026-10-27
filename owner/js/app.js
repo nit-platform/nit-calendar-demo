@@ -7,19 +7,21 @@ import { renderServices } from './services.js';
 import { renderHours } from './hours.js';
 import { renderDays } from './days.js';
 import { renderSettings } from './settings.js';
+import { renderWaitlist } from './waitlist.js';
 
-const VIEWS = ['loading', 'login', 'nobiz', 'calendar', 'services', 'hours', 'days', 'settings'];
-const TABS = { calendar: renderCalendar, services: renderServices, hours: renderHours, days: renderDays, settings: renderSettings };
+const VIEWS = ['loading', 'login', 'nobiz', 'calendar', 'services', 'hours', 'days', 'waitlist', 'settings'];
+const TABS = { calendar: renderCalendar, services: renderServices, hours: renderHours, days: renderDays, waitlist: renderWaitlist, settings: renderSettings };
 function show(name) { for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== name); }
 
 /** shared context for all tabs; reloaded after edits that change it */
 export const ctx = { user: null, business: null, staff: [], services: [], policies: null };
 export async function reloadContext() {
   const b = ctx.business.id;
-  [ctx.staff, ctx.services, [ctx.policies]] = await Promise.all([
+  [ctx.staff, ctx.services, [ctx.policies], ctx.role] = await Promise.all([
     q(sb.from('staff').select('*').eq('business_id', b).order('created_at')),
     q(sb.from('services').select('*').eq('business_id', b).order('created_at')),
     q(sb.from('policies').select('*').eq('business_id', b)),
+    q(sb.from('business_members').select('role').eq('business_id', b).eq('user_id', ctx.user.id)).then((r) => r[0]?.role || null, () => null),
   ]);
 }
 

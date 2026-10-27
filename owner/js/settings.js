@@ -17,14 +17,25 @@ const POLICY_FIELDS = [
   ['eve_close_time', 'שעת סגירה בערב חג', 'time'],
   ['demo_max_bookings_per_phone_day', 'הדגמה: מקס׳ תורים לטלפון ביום', 'number', { min: 0 }],
   ['demo_max_bookings_per_hour', 'הדגמה: מקס׳ תורים בשעה (כל העסק)', 'number', { min: 0 }],
-  ['reminder_24h', 'תזכורת 24 שעות לפני', 'checkbox'],
-  ['reminder_2h', 'תזכורת שעתיים לפני', 'checkbox'],
+  // stage 5: reminders (in-app), quiet hours, waitlist. Owner only (DB-enforced).
+  ['reminder_confirm', 'הודעת אישור מיד אחרי קביעת תור', 'checkbox'],
+  ['reminder_first_min', 'תזכורת ראשונה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
+  ['reminder_second_min', 'תזכורת שנייה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
+  ['quiet_start', 'שעות שקט: מ-', 'time'],
+  ['quiet_end', 'שעות שקט: עד', 'time'],
+  ['quiet_shabbat', 'לא לשלוח בשבת (מיום ו׳ 16:00)', 'checkbox'],
+  ['quiet_holidays', 'לא לשלוח בחגים', 'checkbox'],
+  ['waitlist_enabled', 'רשימת המתנה פעילה', 'checkbox'],
+  ['waitlist_mode', 'הצעת תור שהתפנה', 'select', { options: [['fifo', 'לפי סדר ההרשמה (אחד בכל פעם)'], ['broadcast', 'לכולם, הראשון שמאשר']] }],
+  ['waitlist_timeout_min', 'זמן לאישור הצעה (דקות)', 'number', { min: 5, max: 1440 }],
+  ['last_minute_rule', 'תור של הרגע האחרון', 'select', { options: [['broadcast', 'לכולם, הראשון שמאשר'], ['fifo', 'לפי הסדר']] }],
 ];
+const NON_OWNER_NOTE = 'רק בעל/ת העסק יכול/ה לשנות את ההגדרות.';
 
 function input([col, label, type, extra = {}], val) {
   if (type === 'checkbox') return h('label', { class: 'check' }, h('input', { type, name: col, checked: !!val }), label);
   if (type === 'select') return h('label', {}, label, h('select', { name: col }, extra.options.map(([v, t]) => h('option', { value: v, selected: val === v }, t))));
-  return h('label', {}, label, h('input', { type, name: col, value: type === 'time' ? hhmm(val) : val ?? '', required: true, min: extra.min, step: type === 'time' ? 300 : undefined }));
+  return h('label', {}, label, h('input', { type, name: col, value: type === 'time' ? hhmm(val) : val ?? '', required: true, min: extra.min, max: extra.max, step: type === 'time' ? 300 : undefined }));
 }
 
 export async function renderSettings(root, ctx) {
@@ -55,11 +66,16 @@ export async function renderSettings(root, ctx) {
 
   const polForm = h('form', { class: 'card', id: 'policy-form' }, h('h2', {}, 'כללי הזמנה ויומן'),
     h('div', { class: 'list' }, fields.map((f) => input(f, p[f[0]]))),
-    h('div', { class: 'actions' }, h('button', { class: 'btn primary' }, 'שמירה')));
+    h('p', { class: 'muted' }, 'ערוץ הודעות: באפליקציה בלבד (SMS / וואטסאפ / אימייל לא פעילים).'),
+    ctx.role && ctx.role !== 'owner' ? h('p', { class: 'muted', id: 'policy-owner-only' }, NON_OWNER_NOTE) : null,
+    h('div', { class: 'actions' }, h('button', { class: 'btn primary', disabled: !!ctx.role && ctx.role !== 'owner' }, 'שמירה')));
+  if (ctx.role && ctx.role !== 'owner') for (const el of polForm.elements) el.disabled = true;
   polForm.addEventListener('submit', async (e) => { e.preventDefault();
     const patch = {};
     for (const [c, , t] of fields) { const el = polForm.elements[c]; patch[c] = t === 'checkbox' ? el.checked : t === 'number' ? Number(el.value) : el.value; }
-    try { await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id')); await reloadContext(); toast('ההגדרות נשמרו'); }
+    for (const c of ['reminder_first_min', 'reminder_second_min']) if (c in patch && patch[c] > 0 && patch[c] < 10) { toast('תזכורת: 0 (כבוי) או לפחות 10 דקות', true); return; }
+    try { const rows = await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id'));
+      if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
   root.replaceChildren(...(b.public_slug ? [renderBookingLink(ctx)] : []), bizForm, polForm);
 }
