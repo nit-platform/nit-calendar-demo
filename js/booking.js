@@ -5,6 +5,7 @@ import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 import { addToken, renderInbox } from './waitlist.js';
+import { saveManageLink, bookingManageLink } from './manage.js';
 
 const state = { scope: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
 
@@ -143,7 +144,24 @@ async function submitBooking(ev) {
     const res = await api.book({ scope: state.scope, serviceId: state.serviceId,
                                  startsAt: state.pending.slot_start, name, phone });
     $('#book-dialog').close();
-    toast(`התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
+    const pending = res.status === 'pending';
+    toast(pending
+      ? `הבקשה נשלחה לאישור העסק · ${fmtTime(res.starts_at)}`
+      : `התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
+    // manage_token returned once; show Hebrew link. access_token only when phone already verified.
+    if (res.manage_token && state.scope.kind === 'biz') {
+      saveManageLink(state.scope.slug, res.manage_token);
+      const href = bookingManageLink(state.scope.slug, res.manage_token);
+      const note = h('div', { class: 'card manage-note' },
+        h('p', {}, pending
+          ? 'התור ממתין לאישור העסק. השעה שמורה. שמרו את הקישור לניהול / ביטול:'
+          : 'שמרו את הקישור לניהול התור (צפייה / ביטול / שינוי מועד):'),
+        h('p', {}, h('a', { href, id: 'manage-link' }, 'ניהול התור שלי')));
+      const book = $('#view-book');
+      const oldN = book.querySelector('.manage-note');
+      if (oldN) oldN.remove();
+      book.prepend(note);
+    }
     if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
     loadSlots();
   } catch (e) {

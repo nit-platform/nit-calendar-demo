@@ -40,6 +40,16 @@ const ERRORS = {
   'verification required': 'נא להשלים את בדיקת האבטחה.',
   'verification failed': 'בדיקת האבטחה נכשלה. נסו שוב.',
   'verification unavailable': 'ההרשמה אינה זמינה כרגע. נסו שוב מאוחר יותר.',
+  // manage token (000018)
+  'not found': 'הקישור לניהול התור לא תקין או שפג תוקפו.',
+  'not cancellable': 'לא ניתן לבטל את התור במצבו הנוכחי.',
+  'not reschedulable': 'לא ניתן לשנות את מועד התור במצבו הנוכחי.',
+  'too late to cancel': 'מאוחר מדי לביטול (לפי מדיניות העסק).',
+  'too late to reschedule': 'מאוחר מדי לשינוי מועד (לפי מדיניות העסק).',
+  'too many manage requests from this device, try later': 'יותר מדי ניסיונות מהמכשיר הזה. נסו שוב בעוד כמה דקות.',
+  'too many manage requests from this device today': 'הגעתם למספר הניסיונות המרבי להיום מהמכשיר הזה.',
+  'too many manage requests, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
+  'too many manage requests, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
 };
 export function friendlyError(err) {
   const m = (err && (err.message || String(err))) || '';
@@ -96,4 +106,9 @@ export const api = {
   inbox: (slug, tokens) => rpc('public_inbox', { p_slug: slug, p_tokens: tokens }),
   offer: (slug, token) => rpc('public_offer', { p_slug: slug, p_token: token }),
   offerRespond: (slug, token, accept) => rpc('public_offer_respond', { p_slug: slug, p_token: token, p_accept: accept }),
+  appointmentGet: (slug, token) => rpc('public_appointment_get', { p_slug: slug, p_token: token }),
+  appointmentCancel: (slug, token) => rpc('public_appointment_cancel', { p_slug: slug, p_token: token }),
+  appointmentReschedule: (slug, token, { staffId, serviceId, startsAt }) =>
+    rpc('public_appointment_reschedule', { p_slug: slug, p_token: token, p_staff_id: staffId ?? null,
+                                           p_service_id: serviceId, p_starts_at: startsAt }),
 };

@@ -9,10 +9,11 @@ import { $, h, muted, providerLabel } from './ui.js';
 import { getSlug, canonicalize } from './router.js';
 import { initBooking, selectStaff, selection } from './booking.js';
 import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
+import { renderManage } from './manage.js';
 import { DEFAULT_BUSINESS_SLUG } from './config.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
-function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
+function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
 
 function notFound() { show('missing'); document.title = 'NIT – הדף לא נמצא'; }
 const isNotFound = (e) => /business not found|barber not found/.test(e?.message || '');
@@ -23,12 +24,21 @@ function setTitle(main, biz) {
 }
 
 async function startBusiness(slug, biz, explicit) {
-  const offer = new URLSearchParams(location.search).get('offer');
+  const qs = new URLSearchParams(location.search);
+  const offer = qs.get('offer');
+  const manage = qs.get('manage');
   if (offer !== null) {          // ?b=<slug>&offer=<token>: the offer page only (token never leaves the URL/server call)
     setTitle(biz.business_name, ''); document.title = `${biz.business_name} – הצעה מרשימת המתנה`;
     show('offer');
     await renderOffer(slug, offer.toLowerCase(), $('#offer-box'));
     $('#offer-back').href = location.pathname + '?b=' + encodeURIComponent(slug);
+    return;
+  }
+  if (manage !== null) {         // ?b=<slug>&manage=<token>: Hebrew manage page (view/cancel/reschedule)
+    setTitle(biz.business_name, ''); document.title = `${biz.business_name} – ניהול תור`;
+    show('manage');
+    await renderManage(slug, manage, $('#manage-box'));
+    $('#manage-back').href = location.pathname + '?b=' + encodeURIComponent(slug);
     return;
   }
   if (explicit) canonicalize(slug);
