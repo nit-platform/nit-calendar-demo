@@ -14,6 +14,11 @@
     <h1 id="barber-title">NIT <span>יומן חכם לעסקי שירות</span></h1>
     <p class="biz" id="biz-name"></p>
     <p class="demo-badge">גרסת הדגמה · נתונים לדוגמה בלבד</p>
+    <div id="auth-bar" class="auth-bar hidden" aria-live="polite">
+      <button type="button" class="btn small ghost" id="auth-google">התחברות עם Google</button>
+      <span id="auth-user" class="auth-user hidden"></span>
+      <button type="button" class="btn small ghost hidden" id="auth-signout">התנתקות</button>
+    </div>
   </header>
 
   <main>
@@ -49,6 +54,10 @@
           <p class="muted">הצטרפו לרשימת ההמתנה. אם יתפנה תור בטווח שבחרתם תופיע כאן הצעה, ומי שמאשר ראשון מקבל.</p>
           <div class="actions"><button type="button" class="btn" id="wl-open">הצטרפות לרשימת המתנה</button></div>
         </li>
+        <li class="card hidden" id="my-appts-step">
+          <h2><span class="num">•</span> התורים שלי</h2>
+          <div id="my-appts" aria-live="polite"><p class="muted">התחברו כדי לראות תורים מאומתים לעסק הזה.</p></div>
+        </li>
         <li class="card hidden" id="inbox-step">
           <h2><span class="num">•</span> ההודעות שלי</h2>
           <div id="inbox" aria-live="polite"></div>
@@ -72,6 +81,7 @@
       <div id="book-summary" class="summary"></div>
       <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
       <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="[0-9+\-\s]{9,16}" dir="ltr"></label>
+      <p id="book-auth-note" class="muted small hidden">מחוברים עם Google — התור יישמר כמאומת.</p>
       <p class="form-error" id="book-error" role="alert"></p>
       <div class="actions">
         <button type="button" class="btn ghost" id="book-cancel">ביטול</button>
