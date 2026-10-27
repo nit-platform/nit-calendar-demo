@@ -18,6 +18,8 @@ const ERRORS = {
   'business not found': 'הדף לא נמצא.',
   'too many bookings, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
   'too many bookings, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
+  'too many bookings from this device, try later': 'יותר מדי הזמנות מהמכשיר הזה. נסו שוב בעוד כמה דקות.',
+  'too many bookings from this device today': 'הגעתם למספר ההזמנות המרבי להיום מהמכשיר הזה. נסו שוב מחר.',
   'customer not found, deleted or blocked': 'לא ניתן לקבוע תור ללקוח זה.',
 };
 export function friendlyError(err) {
@@ -35,6 +37,7 @@ async function rpc(name, params) {
 // Every call is scoped by a public slug from the URL. A scope is either
 //   { kind: 'staff', slug }            legacy per-provider demo link (/b/avi)
 //   { kind: 'biz', slug, staffId }     a business booking link (?b=<business slug>) + the chosen provider
+//                                      (staffId null when the business auto-assigns a provider)
 // The server re-checks that staffId belongs to that business; nothing else is reachable.
 export const api = {
   barber: async (slug) => (await rpc('demo_barber', { p_slug: slug }))[0] ?? null,

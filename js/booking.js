@@ -41,14 +41,20 @@ function describeSteps(steps) {
   return steps.map((s) => `${s.name} ${s.max_duration_min ? `${s.duration_min}–${s.max_duration_min}` : s.duration_min}′${s.is_blocking ? '' : ' (המתנה)'}`).join(' → ');
 }
 
+// Provider auto-assigned (no choice): the price may differ per provider -> show "from".
+const priceText = (s) => (s.price_varies ? `החל מ-${shekel(s.price)}` : shekel(s.price));
+
 function renderServices() {
   const box = $('#service-list');
-  if (!state.services.length) { box.replaceChildren(muted(`ל${providerLabel(state.barber)} זה אין שירותים`)); return; }
+  if (!state.services.length) {
+    box.replaceChildren(muted(state.barber.display_name ? `ל${providerLabel(state.barber)} זה אין שירותים` : 'אין כרגע שירותים זמינים'));
+    return;
+  }
   box.replaceChildren(...state.services.map((s) =>
     h('button', { class: 'svc', type: 'button', 'aria-pressed': String(s.service_id === state.serviceId),
                   onclick: () => { state.serviceId = s.service_id; renderServices(); loadSlots(); } },
       h('span', {}, h('b', {}, s.name), h('small', {}, describeSteps(s.steps) || `${s.total_duration_min} דק׳`)),
-      h('span', { class: 'price' }, shekel(s.price)))));
+      h('span', { class: 'price' }, priceText(s)))));
 }
 
 function setDate(iso) {
@@ -108,9 +114,11 @@ function openDialog(slot) {
   const svc = state.services.find((s) => s.service_id === state.serviceId);
   state.pending = slot;
   $('#book-summary').replaceChildren(
-    h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.barber.display_name)),
+    state.barber.display_name
+      ? h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.barber.display_name))
+      : h('div', {}, h('b', {}, svc.name)),
     h('div', {}, `${fmtLongDate(state.date)}, `, h('bdi', { dir: 'ltr' }, `${fmtTime(slot.slot_start)}–${fmtTime(slot.slot_end)}`)),
-    h('div', {}, `מחיר: ${shekel(svc.price)}`),
+    h('div', {}, `מחיר: ${priceText(svc)}`),
     slot.is_dead_time_fill ? h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה ביומן')) : null);
   $('#book-error').textContent = '';
   $('#book-dialog').showModal();

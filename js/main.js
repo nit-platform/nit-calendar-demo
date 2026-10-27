@@ -1,5 +1,6 @@
 // App entry. The URL slug (?b=<slug>, /b/<slug> or #/b/<slug>) is resolved as:
-//   1. a business booking link (public_business) -> that business only, with a provider picker;
+//   1. a business booking link (public_business) -> that business only, with a provider picker
+//      (or no picker when the owner turned off customers_choose_provider: a free provider is auto-assigned);
 //   2. otherwise a legacy per-provider demo link (demo_barber, e.g. /b/avi);
 //   3. no slug at all -> the demo business (DEFAULT_BUSINESS_SLUG).
 // Every value from the server is inserted as text (textContent / text nodes), never as HTML.
@@ -27,6 +28,13 @@ async function startBusiness(slug, biz, explicit) {
   const staff = Array.isArray(biz.staff) ? biz.staff : [];
   const asBarber = (s) => ({ display_name: s.display_name, business_name: biz.business_name, provider_label: biz.provider_label });
   const step = $('#staff-step'), list = $('#staff-list');
+  if (biz.customers_choose_provider === false) {
+    // The business assigns a free provider itself: no names on the page, staffId null.
+    step.classList.add('hidden');
+    show('book');
+    return initBooking({ scope: { kind: 'biz', slug, staffId: null },
+                         barber: { display_name: null, business_name: biz.business_name, provider_label: biz.provider_label } });
+  }
   step.classList.remove('hidden');
   show('book');
   if (!staff.length) { list.replaceChildren(muted('אין כרגע נותני שירות זמינים')); $('#service-list').replaceChildren(muted('—'));
