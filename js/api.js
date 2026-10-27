@@ -23,8 +23,6 @@ const ERRORS = {
   'customer not found, deleted or blocked': 'לא ניתן לקבוע תור ללקוח זה.',
   // waitlist (000013)
   'waitlist disabled': 'רשימת ההמתנה של העסק סגורה כרגע.',
-  'already on waitlist': 'כבר נרשמתם לרשימת ההמתנה לתאריכים האלה.',
-  'too many waitlist entries': 'אפשר להירשם לעד 3 רשימות המתנה במקביל.',
   'invalid dates': 'טווח תאריכים לא תקין (עד 14 יום, מהיום והלאה).',
   'invalid time window': 'טווח שעות לא תקין.',
   'service not found': 'השירות לא נמצא.',
