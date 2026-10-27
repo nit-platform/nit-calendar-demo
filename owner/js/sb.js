@@ -14,6 +14,7 @@ export const ownerUrl = () => location.origin + location.pathname.replace(/index
 
 const ERRORS = [
   [/captcha/i, 'בדיקת האבטחה נכשלה או פגה. השלימו אותה שוב ונסו שנית.'],
+  [/owner only/i, 'רק בעל/ת העסק יכול/ה לשנות את ההגדרה הזו.'],
   [/row-level security|not authorized|permission denied|42501/i, 'אין הרשאה לפעולה הזו.'],
   [/no_double_booking|overlaps|23P01/i, 'ההתנגשות ביומן: יש תור אחר באותה שעה.'],
   [/duplicate key|23505/i, 'כבר קיים ערך כזה (למשל מספר שלב כפול).'],
