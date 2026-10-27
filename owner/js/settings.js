@@ -2,6 +2,7 @@
 import { sb, q, heError, hhmm } from './sb.js';
 import { h, toast, DEFAULT_PROVIDER_LABEL } from '../../js/ui.js';
 import { reloadContext } from './app.js';
+import { renderBookingLink } from './bookinglink.js';
 
 // [column, label, type, extra]
 const POLICY_FIELDS = [
@@ -52,5 +53,5 @@ export async function renderSettings(root, ctx) {
     for (const [c, , t] of fields) { const el = polForm.elements[c]; patch[c] = t === 'checkbox' ? el.checked : t === 'number' ? Number(el.value) : el.value; }
     try { await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id')); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
-  root.replaceChildren(bizForm, polForm);
+  root.replaceChildren(...(b.public_slug ? [renderBookingLink(ctx)] : []), bizForm, polForm);
 }
