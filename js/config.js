@@ -16,3 +16,8 @@ export const TURNSTILE_SITE_KEY = '0x4AAAAAAFnF9X2tOtdv1I-n';
 export const WAITLIST_VIA_FUNCTION = true;
 // Business shown when the page is opened without ?b=<slug> (the demo business).
 export const DEFAULT_BUSINESS_SLUG = 'nit-demo';
+
+// Customer Google sign-in on the booking page. Provider is enabled on the project;
+// new-user signup may still be blocked project-wide (see docs/customer_google_signin.md).
+// Flip to false to hide the UI without a redeploy of Auth settings.
+export const GOOGLE_SIGNIN_ENABLED = false;

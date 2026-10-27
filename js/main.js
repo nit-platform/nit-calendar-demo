@@ -5,15 +5,72 @@
 //   3. no slug at all -> the demo business (DEFAULT_BUSINESS_SLUG).
 // Every value from the server is inserted as text (textContent / text nodes), never as HTML.
 import { api, friendlyError } from './api.js';
-import { $, h, muted, providerLabel } from './ui.js';
+import { $, h, muted, providerLabel, toast } from './ui.js';
 import { getSlug, canonicalize } from './router.js';
 import { initBooking, selectStaff, selection } from './booking.js';
 import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
 import { renderManage } from './manage.js';
 import { DEFAULT_BUSINESS_SLUG } from './config.js';
+import * as auth from './auth.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
+
+let _authSlug = null;
+async function refreshAuthBar(slug) {
+  _authSlug = slug;
+  const bar = $('#auth-bar');
+  if (!auth.googleSignInEnabled() || !bar) return;
+  bar.classList.remove('hidden');
+  const session = await auth.getCustomerSession();
+  const btnIn = $('#auth-google'), btnOut = $('#auth-signout'), user = $('#auth-user');
+  const note = $('#book-auth-note');
+  const myStep = $('#my-appts-step');
+  if (session) {
+    btnIn.classList.add('hidden');
+    btnOut.classList.remove('hidden');
+    user.classList.remove('hidden');
+    user.textContent = session.user?.email || 'מחוברים';
+    if (note) note.classList.remove('hidden');
+    if (myStep && slug) {
+      myStep.classList.remove('hidden');
+      try {
+        const list = await api.myAppointments(slug);
+        const box = $('#my-appts');
+        if (!list.length) box.replaceChildren(muted('אין תורים קרובים לעסק הזה.'));
+        else box.replaceChildren(...list.map((a) =>
+          h('div', { class: 'item' },
+            h('span', {}, `${a.service_name || 'תור'} · ${a.status}`),
+            h('span', { class: 'muted', dir: 'ltr' }, String(a.starts_at || '').replace('T', ' ').slice(0, 16)))));
+      } catch {
+        $('#my-appts').replaceChildren(muted('לא ניתן לטעון תורים כרגע.'));
+      }
+    }
+  } else {
+    btnIn.classList.remove('hidden');
+    btnOut.classList.add('hidden');
+    user.classList.add('hidden');
+    user.textContent = '';
+    if (note) note.classList.add('hidden');
+    if (myStep) myStep.classList.add('hidden');
+  }
+}
+
+function wireAuthBar() {
+  const bar = $('#auth-bar');
+  if (!auth.googleSignInEnabled() || !bar || bar.dataset.wired) return;
+  bar.dataset.wired = '1';
+  $('#auth-google').addEventListener('click', async () => {
+    try { await auth.signInWithGoogle(); }
+    catch (e) { toast(friendlyError(e), true); }
+  });
+  $('#auth-signout').addEventListener('click', async () => {
+    await auth.signOutCustomer();
+    await refreshAuthBar(_authSlug);
+  });
+  auth.onAuthChange(() => { refreshAuthBar(_authSlug); });
+}
+
 
 function notFound() { show('missing'); document.title = 'NIT – הדף לא נמצא'; }
 const isNotFound = (e) => /business not found|barber not found/.test(e?.message || '');

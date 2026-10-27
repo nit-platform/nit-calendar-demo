@@ -3,6 +3,7 @@
 // supabase-js 2.118.0 is loaded by a pinned <script> with an SRI hash in the HTML (sets window.supabase).
 const { createClient } = window.supabase;
 import * as cfg from './config.js';
+import * as auth from './auth.js';
 const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = cfg;
 // Missing in an older cached config.js -> false (legacy path).
 export const WAITLIST_VIA_FUNCTION = cfg.WAITLIST_VIA_FUNCTION === true;
@@ -90,11 +91,29 @@ export const api = {
   slotGrid: (sc, serviceId, date) => sc.kind === 'biz'
     ? rpc('public_slot_grid', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_date: date })
     : rpc('demo_slot_grid', { p_slug: sc.slug, p_service_id: serviceId, p_date: date }),
-  book: ({ scope: sc, serviceId, startsAt, name, phone }) => sc.kind === 'biz'
-    ? rpc('public_book', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_starts_at: startsAt,
-                           p_customer_name: name, p_phone: phone })
-    : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
-                         p_customer_name: name, p_phone: phone }),
+  book: async ({ scope: sc, serviceId, startsAt, name, phone }) => {
+    if (sc.kind === 'biz' && auth.googleSignInEnabled()) {
+      const session = await auth.getCustomerSession();
+      if (session) {
+        return auth.customerRpc('customer_book', {
+          p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_starts_at: startsAt,
+          p_customer_name: name, p_phone: phone,
+        });
+      }
+    }
+    return sc.kind === 'biz'
+      ? rpc('public_book', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_starts_at: startsAt,
+                             p_customer_name: name, p_phone: phone })
+      : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
+                           p_customer_name: name, p_phone: phone });
+  },
+  myAppointments: async (slug) => {
+    if (!auth.googleSignInEnabled()) return [];
+    const session = await auth.getCustomerSession();
+    if (!session) return [];
+    const data = await auth.customerRpc('customer_my_appointments', { p_slug: slug });
+    return Array.isArray(data) ? data : (data ?? []);
+  },
   // waitlist + in-app inbox (business links only). Tokens are random, stored hashed server-side.
   waitlistJoin: ({ slug, staffId, serviceId, from, to, timeFrom, timeTo, name, phone, token, captcha }) => {
     const params = { p_slug: slug, p_staff_id: staffId, p_service_id: serviceId, p_date_from: from, p_date_to: to,
