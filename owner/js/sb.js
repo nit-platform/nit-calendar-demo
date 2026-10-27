@@ -2,9 +2,9 @@
 // Every read/write below is filtered by RLS (business_members). No service-role key anywhere.
 // supabase-js 2.118.0 is loaded by a pinned <script> with an SRI hash in the HTML (sets window.supabase).
 const { createClient } = window.supabase;
-import { SUPABASE_URL, SUPABASE_ANON_KEY, TIMEZONE } from '../../js/config.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, TIMEZONE } from '../../js/config.js';
 
-export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
 });
 export { TIMEZONE };
