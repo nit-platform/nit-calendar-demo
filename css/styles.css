@@ -66,3 +66,7 @@ html,body{overflow-x:hidden}
 .offer-inline{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .btn.small{padding:4px 10px;font-size:.9em}
 #inbox h3{margin:8px 0 4px;font-size:1em}
+
+.manage-note{margin:12px 0;border:1px solid #c5e1a5;background:#f1f8e9}
+.manage-note a{font-weight:700}
+.st-pending{opacity:.85;outline:2px dashed #f0a000}
