@@ -61,6 +61,7 @@ URL: `https://nit-platform.github.io/nit-calendar-demo/owner/`. A static page (s
 - Required Supabase Auth settings: see the main repo README ("Owner dashboard: Supabase Auth setup").
 
 ## Waitlist & inbox (migration 13)
+- The join card is shown only when `public_business` returns `waitlist_enabled` (migration 14). Duplicate or over-limit joins get the same generic success response as a normal join.
 - `js/waitlist.js`:
   - Join dialog: "לא מצאתם שעה?". The response is always the same generic success.
   - Offer page `?b=<slug>&offer=<token>` with accept/decline.
