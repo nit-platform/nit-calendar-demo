@@ -10,14 +10,16 @@ const KIND = { work: 'עבודה', wait: 'המתנה', buffer: 'מרווח' };
 const weekday = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
 
 async function dayInfo(staffId, businessId, iso) {
-  const [hours, specials, offs] = await Promise.all([
+  const [hours, rules, offs] = await Promise.all([
     q(sb.from('working_hours').select('start_time,end_time').eq('staff_id', staffId).eq('weekday', weekday(iso)).order('start_time')),
-    q(sb.from('special_days').select('*').eq('business_id', businessId).eq('date', iso).eq('overridden', false)),
+    rpc('owner_day_rule', { p_staff_id: staffId, p_date: iso }),   // same rule the server uses for slots + booking
     q(sb.from('time_off').select('*').eq('staff_id', staffId)),
   ]);
-  // same precedence as availability: staff-specific beats business-wide, manual beats calendar
-  const sd = specials.filter((s) => !s.staff_id || s.staff_id === staffId)
-    .sort((a, b) => (b.staff_id ? 2 : 0) + (b.source === 'manual' ? 1 : 0) - (a.staff_id ? 2 : 0) - (a.source === 'manual' ? 1 : 0))[0];
+  const r = rules[0];
+  let sd = null;
+  if (r?.closed) sd = { kind: 'closed', name: r.name };
+  else if (r?.open_time || r?.close_time) sd = { kind: r.open_time ? 'special_hours' : 'eve', name: r.name, open_time: r.open_time, close_time: r.close_time };
+  else if (r?.source === 'override') sd = { kind: 'open', name: r.name };
   const off = offs.filter((o) => o.recurring_weekday === weekday(iso) || (o.period && onDate(parseRange(o.period), iso)));
   return { hours, sd, off };
 }
@@ -91,7 +93,7 @@ async function renderDay(box, ctx, rerender) {
     tl.append(h('button', { type: 'button', class: cls, 'data-appt': a.id, style: `top:${top}px;height:${ht}px`, onclick: () => openAppt(a, ctx, rerender) },
       s.kind === 'buffer' ? '' : `${fmtTime(s.seg_start)} ${a.customer || ''} · ${s.kind === 'wait' ? '⏳ ' : ''}${s.step_name}`));
   }
-  const note = info.sd ? h('p', { class: 'day-note' }, `${info.sd.name || ''} ${{ holiday: '(סגור)', closed: '(סגור)', eve: `(ערב חג, עד ${hhmm(info.sd.close_time)})`, special_hours: `(${hhmm(info.sd.open_time)}–${hhmm(info.sd.close_time)})` }[info.sd.kind]}`) : null;
+  const note = info.sd ? h('p', { class: 'day-note' }, `${info.sd.name || ''} ${{ holiday: '(סגור)', closed: '(סגור)', eve: `(עד ${hhmm(info.sd.close_time)})`, special_hours: `(${hhmm(info.sd.open_time)}–${hhmm(info.sd.close_time)})`, open: '(פתוח כרגיל)' }[info.sd.kind]}`) : null;
   box.replaceChildren(h('div', { class: 'card' },
     h('div', { class: 'day-head' }, h('h2', {}, fmtLongDate(st.date)), h('span', { class: 'muted' }, `${appts.length} תורים`)), note,
     h('p', { class: 'legend' }, h('span', {}, h('span', { class: 'dot work' }), 'עבודה'), h('span', {}, h('span', { class: 'dot wait' }), 'המתנה (זמן מת)'),

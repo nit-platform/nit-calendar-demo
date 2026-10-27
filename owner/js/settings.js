@@ -3,6 +3,7 @@ import { sb, q, heError, hhmm } from './sb.js';
 import { h, toast, DEFAULT_PROVIDER_LABEL, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 import { renderBookingLink } from './bookinglink.js';
+import { renderHolidays } from './holidays.js';
 
 // [column, label, type, extra]
 const POLICY_FIELDS = [
@@ -13,8 +14,9 @@ const POLICY_FIELDS = [
   ['cancel_min_hours', 'ביטול עד X שעות לפני', 'number', { min: 0 }],
   ['hold_minutes', 'שמירת שעה בזמן הזמנה (דקות)', 'number', { min: 1 }],
   ['no_show_limit', 'חסימה אחרי X אי-הגעות', 'number', { min: 0 }],
-  ['auto_holidays', 'סנכרון חגים אוטומטי (Hebcal)', 'checkbox'],
-  ['eve_close_time', 'שעת סגירה בערב חג', 'time'],
+  ['auto_holidays', 'חגים לפי לוח השנה: סגור בחג (ברירת מחדל)', 'checkbox'],
+  ['eve_shorten', 'ערב חג: יום מקוצר (ברירת מחדל)', 'checkbox'],
+  ['eve_close_time', 'ערב חג: סגירה בשעה', 'time'],
   ['demo_max_bookings_per_phone_day', 'הדגמה: מקס׳ תורים לטלפון ביום', 'number', { min: 0 }],
   ['demo_max_bookings_per_hour', 'הדגמה: מקס׳ תורים בשעה (כל העסק)', 'number', { min: 0 }],
   // stage 5: reminders (in-app), quiet hours, waitlist. Owner only (DB-enforced).
@@ -77,5 +79,5 @@ export async function renderSettings(root, ctx) {
     try { const rows = await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id'));
       if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
-  root.replaceChildren(...(b.public_slug ? [renderBookingLink(ctx)] : []), bizForm, polForm);
+  root.replaceChildren(...(b.public_slug ? [renderBookingLink(ctx)] : []), bizForm, polForm, renderHolidays(ctx));
 }
