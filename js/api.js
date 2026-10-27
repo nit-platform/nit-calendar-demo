@@ -15,6 +15,9 @@ const ERRORS = {
   'too many bookings for this phone today': 'הגעתם למספר התורים המרבי להיום מהטלפון הזה.',
   'demo is busy, try later': 'ההדגמה עמוסה כרגע, נסו שוב בעוד מעט.',
   'barber not found': 'הדף לא נמצא.',
+  'business not found': 'הדף לא נמצא.',
+  'too many bookings, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
+  'too many bookings, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
   'customer not found, deleted or blocked': 'לא ניתן לקבוע תור ללקוח זה.',
 };
 export function friendlyError(err) {
@@ -29,13 +32,23 @@ async function rpc(name, params) {
   return data ?? [];
 }
 
-// Every call is scoped to ONE barber, identified only by the public slug in the URL.
+// Every call is scoped by a public slug from the URL. A scope is either
+//   { kind: 'staff', slug }            legacy per-provider demo link (/b/avi)
+//   { kind: 'biz', slug, staffId }     a business booking link (?b=<business slug>) + the chosen provider
+// The server re-checks that staffId belongs to that business; nothing else is reachable.
 export const api = {
   barber: async (slug) => (await rpc('demo_barber', { p_slug: slug }))[0] ?? null,
-  listServices: (slug) => rpc('demo_list_services', { p_slug: slug }),
+  business: async (slug) => (await rpc('public_business', { p_slug: slug }))[0] ?? null,
+  listServices: (sc) => sc.kind === 'biz'
+    ? rpc('public_list_services', { p_slug: sc.slug, p_staff_id: sc.staffId })
+    : rpc('demo_list_services', { p_slug: sc.slug }),
   // Every grid start time of the day: { slot_start, slot_end, available, is_dead_time_fill }. Free/busy only.
-  slotGrid: (slug, serviceId, date) => rpc('demo_slot_grid', { p_slug: slug, p_service_id: serviceId, p_date: date }),
-  book: ({ slug, serviceId, startsAt, name, phone }) =>
-    rpc('demo_book', { p_slug: slug, p_service_id: serviceId, p_starts_at: startsAt,
-                       p_customer_name: name, p_phone: phone }),
+  slotGrid: (sc, serviceId, date) => sc.kind === 'biz'
+    ? rpc('public_slot_grid', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_date: date })
+    : rpc('demo_slot_grid', { p_slug: sc.slug, p_service_id: serviceId, p_date: date }),
+  book: ({ scope: sc, serviceId, startsAt, name, phone }) => sc.kind === 'biz'
+    ? rpc('public_book', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_starts_at: startsAt,
+                           p_customer_name: name, p_phone: phone })
+    : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
+                         p_customer_name: name, p_phone: phone }),
 };

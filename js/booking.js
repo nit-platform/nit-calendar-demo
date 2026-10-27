@@ -1,15 +1,15 @@
-// Booking flow for ONE barber (from the URL slug): service -> date -> free/busy grid -> dialog (name + phone) -> demo_book.
+// Booking flow for ONE provider (legacy staff slug, or a business slug + chosen provider): service -> date -> free/busy grid -> dialog (name + phone) -> demo_book.
 // Privacy: the page only learns whether a time is free; busy times carry no name, service or other detail.
 import { api, friendlyError } from './api.js';
 import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 
-const state = { slug: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
+const state = { scope: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
 
-export async function initBooking({ slug, barber }) {
-  state.slug = slug; state.barber = barber;
-  loadServices();
+export async function initBooking({ scope, barber }) {
+  state.scope = scope; state.barber = barber;
+  if (barber) loadServices();
   const di = $('#date-input');
   di.min = todayISO(); di.max = addDays(todayISO(), DAYS_AHEAD); di.value = state.date;
   di.addEventListener('change', () => di.value && setDate(di.value));
@@ -20,10 +20,20 @@ export async function initBooking({ slug, barber }) {
   $('#book-form').addEventListener('submit', submitBooking);
 }
 
+/** Business link: switch to another provider of the same business. */
+export function selectStaff(staffId, barber) {
+  state.scope = { ...state.scope, staffId }; state.barber = barber;
+  state.serviceId = null; state.services = []; slotReq++;
+  $('#slots').replaceChildren(muted('בחרו שירות ותאריך'));
+  loadServices();
+}
+
+let svcReq = 0;
 async function loadServices() {
-  const box = $('#service-list');
-  try { state.services = await api.listServices(state.slug); renderServices(); }
-  catch (e) { box.replaceChildren(muted(friendlyError(e))); }
+  const box = $('#service-list'), my = ++svcReq;
+  box.replaceChildren(muted('טוען…'));
+  try { const list = await api.listServices(state.scope); if (my !== svcReq) return; state.services = list; renderServices(); }
+  catch (e) { if (my === svcReq) box.replaceChildren(muted(friendlyError(e))); }
 }
 
 function describeSteps(steps) {
@@ -60,11 +70,11 @@ function renderDateStrip() {
 let slotReq = 0;
 export async function loadSlots() {
   const box = $('#slots');
-  if (!state.serviceId) return;
+  if (!state.serviceId || !state.barber) return;
   const my = ++slotReq;
   box.replaceChildren(muted('טוען שעות…'));
   try {
-    const rows = await api.slotGrid(state.slug, state.serviceId, state.date);
+    const rows = await api.slotGrid(state.scope, state.serviceId, state.date);
     if (my !== slotReq) return;               // a newer request superseded this one
     renderSlots(rows);
   } catch (e) { if (my === slotReq) box.replaceChildren(muted(friendlyError(e))); }
@@ -114,7 +124,7 @@ async function submitBooking(ev) {
   if (name.length < 2) { $('#book-error').textContent = 'נא להזין שם'; return; }
   btn.disabled = true; $('#book-error').textContent = '';
   try {
-    const res = await api.book({ slug: state.slug, serviceId: state.serviceId,
+    const res = await api.book({ scope: state.scope, serviceId: state.serviceId,
                                  startsAt: state.pending.slot_start, name, phone });
     $('#book-dialog').close();
     toast(`התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
