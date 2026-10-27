@@ -31,6 +31,8 @@ const POLICY_FIELDS = [
   ['waitlist_mode', 'הצעת תור שהתפנה', 'select', { options: [['fifo', 'לפי סדר ההרשמה (אחד בכל פעם)'], ['broadcast', 'לכולם, הראשון שמאשר']] }],
   ['waitlist_timeout_min', 'זמן לאישור הצעה (דקות)', 'number', { min: 5, max: 1440 }],
   ['last_minute_rule', 'תור של הרגע האחרון', 'select', { options: [['broadcast', 'לכולם, הראשון שמאשר'], ['fifo', 'לפי הסדר']] }],
+  // 000018: owner confirm for unverified phones (default off)
+  ['require_owner_confirm_unverified', 'אישור ידני לתורים ממספר שלא אומת', 'checkbox'],
 ];
 const NON_OWNER_NOTE = 'רק בעל/ת העסק יכול/ה לשנות את ההגדרות.';
 

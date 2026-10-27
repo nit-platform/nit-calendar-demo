@@ -49,18 +49,28 @@ function openAppt(a, ctx, rerender) {
       $('#appt-dialog').close(); toast(status === 'cancelled' ? 'התור בוטל' : 'סומן כ"לא הגיע"'); rerender();
     } catch (e) { toast(heError(e), true); }
   };
+  const confirmAppt = async (approve) => {
+    try {
+      await rpc('owner_confirm_appointment', { p_appointment_id: a.id, p_approve: approve });
+      $('#appt-dialog').close(); toast(approve ? 'התור אושר' : 'הבקשה נדחתה'); rerender();
+    } catch (e) { toast(heError(e), true); }
+  };
   const closed = ['cancelled', 'no_show', 'completed'].includes(a.status);
+  const pending = a.status === 'pending';
   f.replaceChildren(
     h('h2', {}, `${fmtTime(a.start)}–${fmtTime(a.end)} · ${a.service}`),
     h('div', { class: 'summary' },
       h('div', {}, h('strong', {}, a.customer || '—'), ' ', a.phone ? h('bdi', { dir: 'ltr' }, h('a', { href: 'tel:' + a.phone }, a.phone)) : ''),
       h('div', {}, 'סטטוס: ', STATUS[a.status] || a.status, a.fill ? h('span', { class: 'badge' }, ' משובץ בזמן המתנה ') : ''),
+      pending ? h('p', { class: 'muted' }, 'ממתין לאישור — השעה שמורה עד לאישור, דחייה, או מועד התור.') : null,
       h('ul', { style: 'margin:6px 0 0;padding-inline-start:18px' }, a.segs.map((s) =>
         h('li', {}, `${fmtTime(s.seg_start)}–${fmtTime(s.seg_end)} ${s.step_name === 'buffer' ? 'מרווח' : s.step_name} (${KIND[s.kind]})`)))),
     h('div', { class: 'actions' },
       h('button', { class: 'btn ghost', value: 'close' }, 'סגירה'),
-      closed ? null : h('button', { type: 'button', class: 'btn outline', id: 'appt-noshow', onclick: () => act('no_show') }, 'לא הגיע'),
-      closed ? null : h('button', { type: 'button', class: 'btn danger', id: 'appt-cancel', onclick: () => confirm('לבטל את התור?') && act('cancelled') }, 'ביטול תור')));
+      pending ? h('button', { type: 'button', class: 'btn primary', onclick: () => confirmAppt(true) }, 'אישור תור') : null,
+      pending ? h('button', { type: 'button', class: 'btn danger', onclick: () => confirm('לדחות את הבקשה?') && confirmAppt(false) }, 'דחייה') : null,
+      closed || pending ? null : h('button', { type: 'button', class: 'btn outline', id: 'appt-noshow', onclick: () => act('no_show') }, 'לא הגיע'),
+      closed || pending ? null : h('button', { type: 'button', class: 'btn danger', id: 'appt-cancel', onclick: () => confirm('לבטל את התור?') && act('cancelled') }, 'ביטול תור')));
   $('#appt-dialog').showModal();
 }
 
