@@ -13,6 +13,6 @@ export const DAYS_AHEAD = 14;
 export const TURNSTILE_SITE_KEY = '0x4AAAAAAFnF9X2tOtdv1I-n';
 // Waitlist join through the `waitlist-join` Edge Function (Turnstile-verified, migration 000015).
 // false = legacy direct RPC (works only while private.app_flags.turnstile_required is false).
-export const WAITLIST_VIA_FUNCTION = false;
+export const WAITLIST_VIA_FUNCTION = true;
 // Business shown when the page is opened without ?b=<slug> (the demo business).
 export const DEFAULT_BUSINESS_SLUG = 'nit-demo';
