@@ -18,9 +18,13 @@
 
   <main>
     <section id="view-missing" class="view hidden"><div class="card"><h2>הדף לא נמצא</h2>
-      <p class="muted">לכל נותן שירות יש קישור אישי משלו (למשל <bdi dir="ltr">…/b/avi</bdi>). בקשו מנותן השירות את הקישור שלו.</p></div></section>
+      <p class="muted">הקישור לא תקין או שהעסק לא קיים. לכל עסק יש קישור הזמנה אישי (למשל <bdi dir="ltr">…/?b=my-salon</bdi>). בקשו מהעסק את הקישור שלו.</p></div></section>
     <section id="view-book" class="view" aria-label="קביעת תור">
       <ol class="steps">
+        <li class="card hidden" id="staff-step">
+          <h2><span class="num">•</span> <span id="staff-label">בחירת נותן שירות</span></h2>
+          <div id="staff-list" class="services"></div>
+        </li>
         <li class="card">
           <h2><span class="num">1</span> בחירת שירות</h2>
           <div id="service-list" class="services"><p class="muted">טוען…</p></div>
