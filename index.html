@@ -44,7 +44,20 @@
             <span class="dot busy"></span> תפוס</p>
           <div id="slots" aria-live="polite"><p class="muted">בחרו שירות ותאריך</p></div>
         </li>
+        <li class="card hidden" id="waitlist-step">
+          <h2><span class="num">•</span> לא מצאתם שעה?</h2>
+          <p class="muted">הצטרפו לרשימת ההמתנה. אם יתפנה תור בטווח שבחרתם תופיע כאן הצעה, ומי שמאשר ראשון מקבל.</p>
+          <div class="actions"><button type="button" class="btn" id="wl-open">הצטרפות לרשימת המתנה</button></div>
+        </li>
+        <li class="card hidden" id="inbox-step">
+          <h2><span class="num">•</span> ההודעות שלי</h2>
+          <div id="inbox" aria-live="polite"></div>
+        </li>
       </ol>
+    </section>
+    <section id="view-offer" class="view hidden" aria-label="הצעה מרשימת המתנה">
+      <div class="card" id="offer-box"></div>
+      <p><a id="offer-back" href="./">לדף קביעת התורים</a></p>
     </section>
 
   </main>
@@ -59,6 +72,28 @@
       <div class="actions">
         <button type="button" class="btn ghost" id="book-cancel">ביטול</button>
         <button type="submit" class="btn primary" id="book-submit">קבע תור</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="wl-dialog">
+    <form id="wl-form" method="dialog">
+      <h2>הצטרפות לרשימת המתנה</h2>
+      <div id="wl-summary" class="summary"></div>
+      <div class="row">
+        <label>מתאריך <input type="date" name="from" required></label>
+        <label>עד תאריך <input type="date" name="to" required></label>
+      </div>
+      <div class="row">
+        <label>משעה (לא חובה) <input type="time" name="tfrom" step="300"></label>
+        <label>עד שעה <input type="time" name="tto" step="300"></label>
+      </div>
+      <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
+      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="[0-9+\-\s]{9,16}" dir="ltr"></label>
+      <p class="form-error" id="wl-error" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn ghost" id="wl-cancel">ביטול</button>
+        <button type="submit" class="btn primary" id="wl-submit">הרשמה</button>
       </div>
     </form>
   </dialog>

@@ -59,3 +59,10 @@ URL: `https://nit-platform.github.io/nit-calendar-demo/owner/`. A static page (s
   - הגדרות (settings): the booking-link card (full URL, copy button, slug editing: a-z 0-9 '-', 3–40 chars, reserved words blocked, unique; owner only, enforced in the DB), business details and booking policies.
 - Files: `owner/index.html`, `owner/owner.css`, and in `owner/js/`: `sb.js` (client, Hebrew errors, Israel-time helpers), `app.js` (auth, business choice, tabs), `calendar.js`, `services.js`, `hours.js`, `days.js`, `settings.js`, `bookinglink.js`.
 - Required Supabase Auth settings: see the main repo README ("Owner dashboard: Supabase Auth setup").
+
+## Waitlist & inbox (migration 13)
+- `js/waitlist.js`:
+  - Join dialog: "לא מצאתם שעה?". The response is always the same generic success.
+  - Offer page `?b=<slug>&offer=<token>` with accept/decline.
+  - "ההודעות שלי" inbox: polls every 30 seconds and when the tab becomes visible. Its access tokens are kept in `localStorage` (`nit-access:<slug>`).
+- Owner `owner/js/waitlist.js`: waiting entries, offers (copy the offer link), customers blocked for no-shows (owner-only reset), and recent in-app messages. The settings tab has reminders, quiet hours and waitlist settings, and is read-only for non-owners.
