@@ -2,7 +2,10 @@
 // demo_* RPCs for authenticated ones (get_available_slots / book_appointment / owner_day_view) here.
 // supabase-js 2.118.0 is loaded by a pinned <script> with an SRI hash in the HTML (sets window.supabase).
 const { createClient } = window.supabase;
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+import * as cfg from './config.js';
+const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = cfg;
+// Missing in an older cached config.js -> false (legacy path).
+export const WAITLIST_VIA_FUNCTION = cfg.WAITLIST_VIA_FUNCTION === true;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -33,6 +36,10 @@ const ERRORS = {
   'too many waitlist requests, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
   'too many attempts, try later': 'יותר מדי ניסיונות. נסו שוב מאוחר יותר.',
   'invalid input': 'הבקשה לא תקינה.',
+  // Turnstile (000015)
+  'verification required': 'נא להשלים את בדיקת האבטחה.',
+  'verification failed': 'בדיקת האבטחה נכשלה. נסו שוב.',
+  'verification unavailable': 'ההרשמה אינה זמינה כרגע. נסו שוב מאוחר יותר.',
 };
 export function friendlyError(err) {
   const m = (err && (err.message || String(err))) || '';
@@ -43,6 +50,18 @@ export function friendlyError(err) {
 async function rpc(name, params) {
   const { data, error } = await supabase.rpc(name, params);
   if (error) throw error;
+  return data ?? [];
+}
+
+// Edge Function call (same supabase.co host, already in CSP connect-src). Errors carry the server message.
+async function viaFunction(name, body) {
+  let res, data;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    data = await res.json().catch(() => null);
+  } catch { throw new Error('network'); }
+  if (!res.ok) throw new Error((data && (data.message || data.error)) || `http ${res.status}`);
   return data ?? [];
 }
 
@@ -67,9 +86,12 @@ export const api = {
     : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
                          p_customer_name: name, p_phone: phone }),
   // waitlist + in-app inbox (business links only). Tokens are random, stored hashed server-side.
-  waitlistJoin: ({ slug, staffId, serviceId, from, to, timeFrom, timeTo, name, phone, token }) => rpc('public_waitlist_join', {
-    p_slug: slug, p_staff_id: staffId, p_service_id: serviceId, p_date_from: from, p_date_to: to,
-    p_time_from: timeFrom || null, p_time_to: timeTo || null, p_customer_name: name, p_phone: phone, p_access_token: token || null }),
+  waitlistJoin: ({ slug, staffId, serviceId, from, to, timeFrom, timeTo, name, phone, token, captcha }) => {
+    const params = { p_slug: slug, p_staff_id: staffId, p_service_id: serviceId, p_date_from: from, p_date_to: to,
+      p_time_from: timeFrom || null, p_time_to: timeTo || null, p_customer_name: name, p_phone: phone, p_access_token: token || null };
+    return WAITLIST_VIA_FUNCTION ? viaFunction('waitlist-join', { ...params, turnstile_token: captcha || '' })
+                                 : rpc('public_waitlist_join', params);
+  },
   waitlistCancel: (slug, token, entryId) => rpc('public_waitlist_cancel', { p_slug: slug, p_token: token, p_entry_id: entryId }),
   inbox: (slug, tokens) => rpc('public_inbox', { p_slug: slug, p_tokens: tokens }),
   offer: (slug, token) => rpc('public_offer', { p_slug: slug, p_token: token }),

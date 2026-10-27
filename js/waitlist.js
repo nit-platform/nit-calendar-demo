@@ -4,7 +4,8 @@
 // - inbox: public_inbox(slug, tokens) – reminders/offers sent in-app, own waitlist entries; polled while the page is visible.
 // - offer link (?b=<slug>&offer=<token>): public_offer / public_offer_respond. First accept wins (server-side, atomic).
 // Every server value is inserted as text, never HTML.
-import { api, friendlyError } from './api.js';
+import { api, friendlyError, WAITLIST_VIA_FUNCTION } from './api.js';
+import { initWlCaptcha, wlCaptchaToken, resetWlCaptcha } from './wl-captcha.js';
 import { $, h, muted, toast } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate } from './time.js';
 
@@ -102,6 +103,7 @@ export function initWaitlist(slug, selection) {
     $('#wl-summary').textContent = sel.label || '';
     $('#wl-error').textContent = '';
     dlg.showModal(); form.elements.name.focus();
+    if (WAITLIST_VIA_FUNCTION) initWlCaptcha($('#wl-captcha'));
   });
   $('#wl-cancel').addEventListener('click', () => dlg.close());
   form.addEventListener('submit', async (ev) => {
@@ -111,16 +113,18 @@ export function initWaitlist(slug, selection) {
     if (name.length < 2) { $('#wl-error').textContent = 'נא להזין שם'; return; }
     if (f.to.value < f.from.value) { $('#wl-error').textContent = 'תאריך הסיום לפני תאריך ההתחלה'; return; }
     if (!!f.tfrom.value !== !!f.tto.value || (f.tfrom.value && f.tto.value <= f.tfrom.value)) { $('#wl-error').textContent = 'טווח שעות לא תקין'; return; }
+    const captcha = WAITLIST_VIA_FUNCTION ? wlCaptchaToken() : '';
+    if (WAITLIST_VIA_FUNCTION && !captcha) { $('#wl-error').textContent = 'נא להשלים את בדיקת האבטחה.'; return; }
     btn.disabled = true; $('#wl-error').textContent = '';
     try {
       const res = await api.waitlistJoin({ slug, staffId: sel.staffId, serviceId: sel.serviceId, from: f.from.value, to: f.to.value,
-        timeFrom: f.tfrom.value, timeTo: f.tto.value, name, phone, token: getTokens(slug)[0] });
+        timeFrom: f.tfrom.value, timeTo: f.tto.value, name, phone, token: getTokens(slug)[0], captcha });
       addToken(slug, res.access_token);
       dlg.close();
       // same message whatever the server decided (it never says whether a number is blocked)
       toast('נרשמתם לרשימת ההמתנה ✔ אם יתפנה תור תופיע כאן הודעה.');
       renderInbox(slug);
     } catch (e) { $('#wl-error').textContent = friendlyError(e); }
-    finally { btn.disabled = false; }
+    finally { btn.disabled = false; if (WAITLIST_VIA_FUNCTION) resetWlCaptcha(); }
   });
 }
