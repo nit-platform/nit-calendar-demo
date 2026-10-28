@@ -45,7 +45,7 @@ dialog input{font:inherit;padding:10px;border:1.5px solid #d7d7dc;border-radius:
 .summary{background:var(--bg);border-radius:10px;padding:10px;font-size:.92rem}
 .summary .badge{display:inline-block;background:var(--fill);color:#2a1a00;border-radius:6px;padding:1px 6px;font-size:.78rem;font-weight:700}
 .form-error{color:var(--err);margin:0;min-height:1.2em;font-size:.9rem}
-.actions{display:flex;gap:8px;justify-content:flex-end}
+.actions{display:flex;gap:8px;justify-content:flex-start}
 .btn{font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;border:0;cursor:pointer}
 .btn.primary{background:var(--brand);color:#fff}.btn.ghost{background:transparent;color:var(--ink)}
 .btn:disabled{opacity:.5;cursor:wait}
@@ -56,7 +56,7 @@ dialog input{font:inherit;padding:10px;border:1.5px solid #d7d7dc;border-radius:
 html,body{overflow-x:hidden}
 .biz{margin:2px 0 0;font-size:.85rem;opacity:.85}
 
-.slot.busy,.slot:disabled{background:#ececef;border-color:#e2e2e6;color:#a3a3ab;cursor:not-allowed;text-decoration:line-through;box-shadow:none}
+.slot.busy,.slot:disabled{background:#ececef;border-color:#e2e2e6;color:#6b6b70;cursor:not-allowed;text-decoration:line-through;box-shadow:none}
 
 /* waitlist + inbox (000013) */
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
