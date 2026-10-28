@@ -9,8 +9,9 @@ import { renderHours } from './hours.js';
 import { renderDays } from './days.js';
 import { renderSettings } from './settings.js';
 import { renderWaitlist } from './waitlist.js';
+import { renderOnboard } from './onboard.js';
 
-const VIEWS = ['loading', 'login', 'nobiz', 'calendar', 'staff', 'services', 'hours', 'days', 'waitlist', 'settings'];
+const VIEWS = ['loading', 'login', 'nobiz', 'onboard', 'calendar', 'staff', 'services', 'hours', 'days', 'waitlist', 'settings'];
 const TABS = { calendar: renderCalendar, staff: renderStaff, services: renderServices, hours: renderHours, days: renderDays, waitlist: renderWaitlist, settings: renderSettings };
 function show(name) { for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== name); }
 
@@ -119,6 +120,61 @@ export async function openTab(name) {
 }
 $('#tabs').addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (t) openTab(t.dataset.tab); });
 
+// ---------- nobiz (K3) + onboard (K1) ----------
+async function enterDashboard(business) {
+  ctx.business = business;
+  localStorage.setItem('nit-owner-business', business.id);
+  await reloadContext();
+  $('#biz-name').textContent = ctx.business.name;
+  document.title = `${ctx.business.name} – ניהול`;
+  $('#tabs').classList.remove('hidden');
+  await refreshSetupBanner();
+  openTab(current);
+}
+
+async function openOnboard() {
+  $('#tabs').classList.add('hidden');
+  $('#biz-name').textContent = '';
+  $('#setup-banner')?.classList.add('hidden');
+  show('onboard');
+  const root = $('#view-onboard');
+  await renderOnboard(root, {
+    user: ctx.user,
+    onCancel: async () => {
+      // If a draft business already exists, drop into the dashboard (B10 covers leftovers).
+      try {
+        const businesses = await q(sb.from('businesses').select('*').order('created_at'));
+        if (businesses.length) { await enterDashboard(businesses[businesses.length - 1]); return; }
+      } catch (_) {}
+      show('nobiz');
+    },
+    onDone: async (business) => { await enterDashboard(business); },
+  });
+}
+
+function wireNobiz() {
+  $('#nobiz-create')?.addEventListener('click', () => openOnboard());
+  $('#nobiz-logout')?.addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+  $('#nobiz-refresh')?.addEventListener('click', async () => {
+    const err = $('#nobiz-error'); if (err) { err.textContent = ''; err.classList.add('hidden'); }
+    const btn = $('#nobiz-refresh'); if (btn) btn.disabled = true;
+    try {
+      await rpc('claim_owner_invites', {});
+      const businesses = await q(sb.from('businesses').select('*').order('created_at'));
+      if (!businesses.length) {
+        if (err) { err.textContent = 'עדיין אין הזמנה למייל הזה. בקשו מבעל העסק להוסיף אתכם, או פתחו עסק חדש.'; err.classList.remove('hidden'); }
+        return;
+      }
+      const saved = localStorage.getItem('nit-owner-business');
+      await enterDashboard(businesses.find((b) => b.id === saved) || businesses[0]);
+    } catch (e) {
+      if (err) { err.textContent = heError(e); err.classList.remove('hidden'); }
+      else toast(heError(e), true);
+    } finally { if (btn) btn.disabled = false; }
+  });
+}
+wireNobiz();
+
 // ---------- boot ----------
 async function start() {
   show('loading');
@@ -132,14 +188,8 @@ async function start() {
     const businesses = await q(sb.from('businesses').select('*').order('created_at'));
     if (!businesses.length) { show('nobiz'); await refreshSetupBanner(); return; }
     const saved = localStorage.getItem('nit-owner-business');
-    ctx.business = businesses.find((b) => b.id === saved) || businesses[0];
-    await reloadContext();
-  } catch (e) { show('nobiz'); toast(heError(e), true); await refreshSetupBanner(); return; }
-  $('#biz-name').textContent = ctx.business.name;
-  document.title = `${ctx.business.name} – ניהול`;
-  $('#tabs').classList.remove('hidden');
-  await refreshSetupBanner();
-  openTab(current);
+    await enterDashboard(businesses.find((b) => b.id === saved) || businesses[0]);
+  } catch (e) { show('nobiz'); toast(heError(e), true); await refreshSetupBanner(); }
 }
 sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') show('login'); });
 start();

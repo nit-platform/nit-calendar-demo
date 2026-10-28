@@ -20,7 +20,16 @@ const ERRORS = [
   [/duplicate key|23505/i, 'כבר קיים ערך כזה (למשל מספר שלב כפול).'],
   [/check constraint|23514/i, 'ערך לא תקין (בדקו טווחים ושעות).'],
   [/Token has expired|invalid.*otp|otp_expired/i, 'הקוד שגוי או שפג תוקפו. בקשו קוד חדש.'],
-  [/rate limit|For security purposes/i, 'יותר מדי ניסיונות. נסו שוב בעוד דקה.'],
+  [/too many businesses created from this device today/i, 'נוצרו יותר מדי עסקים מהמכשיר הזה היום. נסו מחר.'],
+  [/too many businesses created from this device/i, 'נוצרו יותר מדי עסקים מהמכשיר הזה. נסו שוב מאוחר יותר.'],
+  [/too many businesses created today/i, 'נוצרו יותר מדי עסקים היום. נסו מחר.'],
+  [/too many businesses created/i, 'נוצרו יותר מדי עסקים. נסו שוב מאוחר יותר.'],
+  [/email not confirmed/i, 'יש לאמת את כתובת המייל לפני פתיחת עסק.'],
+  [/invalid name/i, 'שם העסק לא תקין (2–80 תווים, ללא < או >).'],
+  [/invalid provider_label/i, 'כינוי נותן השירות לא תקין.'],
+  [/invalid phone/i, 'מספר וואטסאפ לא תקין.'],
+  [/public_slug unavailable/i, 'הקישור הזה לא זמין, בחרו מזהה אחר.'],
+  [/rate limit|For security purposes|PT429/i, 'יותר מדי ניסיונות. נסו שוב בעוד דקה.'],
   [/fetch|network/i, 'אין חיבור לשרת. נסו שוב.'],
 ];
 export function heError(e) {
