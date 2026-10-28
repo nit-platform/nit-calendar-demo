@@ -54,10 +54,18 @@
       <p class="form-error" id="login-error" role="alert"></p>
     </div></section>
 
-    <section id="view-nobiz" class="view hidden"><div class="card">
-      <h2>אין לך הרשאה לעסק</h2>
-      <p class="muted">החשבון הזה מחובר, אבל הוא לא משויך לאף עסק. בקשו מבעל העסק להוסיף את כתובת המייל שלכם.</p>
+    <section id="view-nobiz" class="view hidden"><div class="card" id="nobiz-card">
+      <h2>אין עסק משויך לחשבון הזה</h2>
+      <p class="muted">כדי לנהל יומן צריך הזמנה מבעל עסק קיים, או פתיחת עסק חדש.</p>
+      <div class="actions nobiz-actions">
+        <button type="button" class="btn primary" id="nobiz-create">פתיחת עסק חדש</button>
+        <button type="button" class="btn" id="nobiz-refresh">יש לי הזמנה — רענון</button>
+        <button type="button" class="btn link" id="nobiz-logout">התנתקות</button>
+      </div>
+      <p class="form-error hidden" id="nobiz-error" role="alert"></p>
     </div></section>
+
+    <section id="view-onboard" class="view hidden"></section>
 
     <section id="view-calendar" class="view tab-view hidden"></section>
     <section id="view-staff" class="view tab-view hidden"></section>

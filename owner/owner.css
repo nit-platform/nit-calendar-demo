@@ -73,3 +73,16 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .form-error{color:var(--err);font-size:.88rem;margin:4px 0 0}
 .form-error.hidden{display:none}
 .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:10px}
+/* K3 nobiz + K1 onboard */
+.nobiz-actions{justify-content:stretch;margin-top:16px}
+.nobiz-actions .btn{flex:1 1 140px;min-height:44px}
+.onboard{max-width:520px;margin:0 auto;display:grid;gap:12px}
+.onboard-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.onboard-top h2{margin:0;font-size:1.15rem}
+.onboard-progress{display:flex;gap:6px}
+.onboard-progress span{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;background:#ececef;color:#555}
+.onboard-progress span.on{background:var(--brand);color:#fff}
+.onboard-progress span.done{background:#c8e6c9;color:#1b5e20}
+.onboard-card{display:grid;gap:10px}
+.onboard-summary{margin:0;padding-inline-start:1.2em;line-height:1.7}
+.muted.ok{color:#2e7d32;font-weight:600}
