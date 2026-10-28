@@ -114,6 +114,14 @@ export const api = {
     const data = await auth.customerRpc('customer_my_appointments', { p_slug: slug });
     return Array.isArray(data) ? data : (data ?? []);
   },
+  // Linked businesses only (joined via ?b=slug). No directory/search — server returns exact set.
+  myBusinesses: async () => {
+    if (!auth.googleSignInEnabled()) return [];
+    const session = await auth.getCustomerSession();
+    if (!session) return [];
+    const data = await auth.customerRpc('customer_my_businesses', {});
+    return Array.isArray(data) ? data : (data ?? []);
+  },
   // waitlist + in-app inbox (business links only). Tokens are random, stored hashed server-side.
   waitlistJoin: ({ slug, staffId, serviceId, from, to, timeFrom, timeTo, name, phone, token, captcha }) => {
     const params = { p_slug: slug, p_staff_id: staffId, p_service_id: serviceId, p_date_from: from, p_date_to: to,
