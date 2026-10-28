@@ -27,6 +27,7 @@ const ERRORS = [
   [/email not confirmed/i, 'יש לאמת את כתובת המייל לפני פתיחת עסק.'],
   [/invalid name/i, 'שם העסק לא תקין (2–80 תווים, ללא < או >).'],
   [/invalid provider_label/i, 'כינוי נותן השירות לא תקין.'],
+  [/invalid display_name/i, 'שם נותן השירות לא תקין (2–60 תווים, ללא < או >).'],
   [/invalid phone/i, 'מספר וואטסאפ לא תקין.'],
   [/public_slug unavailable/i, 'הקישור הזה לא זמין, בחרו מזהה אחר.'],
   [/rate limit|For security purposes|PT429/i, 'יותר מדי ניסיונות. נסו שוב בעוד דקה.'],
