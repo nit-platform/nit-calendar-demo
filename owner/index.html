@@ -20,6 +20,7 @@
     </div>
     <nav id="tabs" class="tabs hidden" role="tablist">
       <button role="tab" data-tab="calendar" aria-selected="true">יומן</button>
+      <button role="tab" data-tab="staff">צוות</button>
       <button role="tab" data-tab="services">שירותים</button>
       <button role="tab" data-tab="hours">שעות והפסקות</button>
       <button role="tab" data-tab="days">ימים מיוחדים</button>
@@ -27,6 +28,8 @@
       <button role="tab" data-tab="settings">הגדרות</button>
     </nav>
   </header>
+
+  <div id="setup-banner" class="setup-banner hidden" role="region" aria-label="השלמת הגדרה"></div>
 
   <main>
     <section id="view-loading" class="view"><div class="card"><p class="muted">טוען…</p></div></section>
@@ -57,6 +60,7 @@
     </div></section>
 
     <section id="view-calendar" class="view tab-view hidden"></section>
+    <section id="view-staff" class="view tab-view hidden"></section>
     <section id="view-services" class="view tab-view hidden"></section>
     <section id="view-hours" class="view tab-view hidden"></section>
     <section id="view-days" class="view tab-view hidden"></section>

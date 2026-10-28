@@ -1,8 +1,9 @@
 .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .btn.link{background:transparent;color:#fff;text-decoration:underline;padding:4px 0;font-weight:400}
-.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 12px}
-.tabs button{font:inherit;color:#fff;opacity:.75;background:none;border:0;border-bottom:3px solid transparent;padding:10px 8px;white-space:nowrap;cursor:pointer}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;margin:0 -16px;padding:0 12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(to left,transparent,#000 12px,#000 calc(100% - 12px),transparent);-webkit-mask-image:linear-gradient(to left,transparent,#000 12px,#000 calc(100% - 12px),transparent)}
+.tabs button{font:inherit;color:#fff;opacity:.75;background:none;border:0;border-bottom:3px solid transparent;padding:12px 10px;white-space:nowrap;cursor:pointer;min-height:44px;scroll-snap-align:start;flex:0 0 auto}
 .tabs button[aria-selected=true]{opacity:1;border-bottom-color:#fff;font-weight:700}
+.tabs button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .tab-view{display:grid;gap:12px}
 .login{display:grid;gap:12px;max-width:420px;margin:0 auto}
 .login form{display:grid;gap:10px}
@@ -19,7 +20,7 @@ input[type=checkbox]{width:20px;height:20px;padding:0}
 .seg{display:inline-flex;border:1.5px solid #d7d7dc;border-radius:10px;overflow:hidden}
 .seg button{font:inherit;border:0;background:#fff;padding:8px 14px;cursor:pointer}
 .seg button[aria-pressed=true]{background:var(--brand);color:#fff}
-.btn.small{padding:6px 12px;font-size:.88rem}.btn.danger{background:var(--err);color:#fff}
+.btn.small{padding:10px 14px;font-size:.88rem;min-height:44px}.btn.danger{background:var(--err);color:#fff}
 .btn.outline{background:#fff;border:1.5px solid var(--brand);color:var(--brand)}
 .day-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .day-note{font-size:.85rem;color:#8a5a00;background:var(--fill-bg);border-radius:8px;padding:4px 8px;margin:6px 0}
@@ -58,3 +59,17 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 #appt-form{padding:18px;display:grid;gap:10px}
 .captcha{min-height:65px}
 #booking-url{flex:1 1 220px;word-break:break-all;align-self:center}
+/* B10 setup-completion banner */
+.setup-banner{background:#fff8e6;border-bottom:1px solid #f0d48a;color:#5c4400;padding:10px 16px}
+.setup-banner.hidden{display:none}
+.setup-inner{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;max-width:960px;margin:0 auto}
+.setup-inner p{margin:0;flex:1;line-height:1.5;font-size:.92rem}
+.setup-link{font:inherit;background:none;border:0;padding:0;color:var(--brand-2,#0b57d0);text-decoration:underline;cursor:pointer;font-weight:700;min-height:44px}
+.setup-done{color:#3d7a3d;font-weight:600}
+.setup-sep{opacity:.5}
+.setup-dismiss{flex:0 0 auto;min-width:44px;min-height:44px}
+.staff-card summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.staff-card summary::-webkit-details-marker{display:none}
+.form-error{color:var(--err);font-size:.88rem;margin:4px 0 0}
+.form-error.hidden{display:none}
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:10px}
