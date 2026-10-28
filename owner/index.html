@@ -18,15 +18,18 @@
       <p class="demo-badge" id="who"></p>
       <button class="btn link hidden" id="logout">התנתקות</button>
     </div>
-    <nav id="tabs" class="tabs hidden" role="tablist">
-      <button role="tab" data-tab="calendar" aria-selected="true">יומן</button>
-      <button role="tab" data-tab="staff">צוות</button>
-      <button role="tab" data-tab="services">שירותים</button>
-      <button role="tab" data-tab="hours">שעות והפסקות</button>
-      <button role="tab" data-tab="days">ימים מיוחדים</button>
-      <button role="tab" data-tab="waitlist">רשימת המתנה</button>
-      <button role="tab" data-tab="settings">הגדרות</button>
-    </nav>
+    <div class="tabs-wrap hidden" id="tabs-wrap">
+      <button type="button" class="tabs-more" id="tabs-more" aria-label="לשוניות נוספות">עוד</button>
+      <nav id="tabs" class="tabs" role="tablist" aria-label="ניווט לוח הבקרה">
+        <button type="button" role="tab" id="tab-calendar" data-tab="calendar" aria-controls="view-calendar" aria-selected="true" tabindex="0">יומן</button>
+        <button type="button" role="tab" id="tab-staff" data-tab="staff" aria-controls="view-staff" aria-selected="false" tabindex="-1">צוות</button>
+        <button type="button" role="tab" id="tab-services" data-tab="services" aria-controls="view-services" aria-selected="false" tabindex="-1">שירותים</button>
+        <button type="button" role="tab" id="tab-hours" data-tab="hours" aria-controls="view-hours" aria-selected="false" tabindex="-1">שעות והפסקות</button>
+        <button type="button" role="tab" id="tab-days" data-tab="days" aria-controls="view-days" aria-selected="false" tabindex="-1">ימים מיוחדים</button>
+        <button type="button" role="tab" id="tab-waitlist" data-tab="waitlist" aria-controls="view-waitlist" aria-selected="false" tabindex="-1">רשימת המתנה</button>
+        <button type="button" role="tab" id="tab-settings" data-tab="settings" aria-controls="view-settings" aria-selected="false" tabindex="-1">הגדרות</button>
+      </nav>
+    </div>
   </header>
 
   <div id="setup-banner" class="setup-banner hidden" role="region" aria-label="השלמת הגדרה"></div>
@@ -67,13 +70,13 @@
 
     <section id="view-onboard" class="view hidden"></section>
 
-    <section id="view-calendar" class="view tab-view hidden"></section>
-    <section id="view-staff" class="view tab-view hidden"></section>
-    <section id="view-services" class="view tab-view hidden"></section>
-    <section id="view-hours" class="view tab-view hidden"></section>
-    <section id="view-days" class="view tab-view hidden"></section>
-    <section id="view-waitlist" class="view tab-view hidden"></section>
-    <section id="view-settings" class="view tab-view hidden"></section>
+    <section id="view-calendar" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-calendar" tabindex="0"></section>
+    <section id="view-staff" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-staff" tabindex="0"></section>
+    <section id="view-services" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-services" tabindex="0"></section>
+    <section id="view-hours" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-hours" tabindex="0"></section>
+    <section id="view-days" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-days" tabindex="0"></section>
+    <section id="view-waitlist" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-waitlist" tabindex="0"></section>
+    <section id="view-settings" class="view tab-view hidden" role="tabpanel" aria-labelledby="tab-settings" tabindex="0"></section>
   </main>
 
   <dialog id="appt-dialog"><form method="dialog" id="appt-form"></form></dialog>
@@ -84,6 +87,16 @@
       <div class="actions">
         <button type="submit" class="btn ghost" value="no">לא</button>
         <button type="submit" class="btn danger" value="yes">כן, מחקו</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="danger-confirm" aria-labelledby="danger-confirm-title">
+    <form method="dialog" class="danger-confirm-form">
+      <h2 id="danger-confirm-title">ביטול התור?</h2>
+      <p id="danger-confirm-body" class="muted"></p>
+      <div class="actions">
+        <button type="submit" class="btn ghost" value="no">לא</button>
+        <button type="submit" class="btn danger" id="danger-confirm-yes" value="yes">כן, בטל</button>
       </div>
     </form>
   </dialog>
