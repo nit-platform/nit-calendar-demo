@@ -146,3 +146,11 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .card > .actions .btn.primary{order:2}
 .card > .actions .btn:not(.primary){order:1}
 .otp-hint{margin:0;font-size:.88rem}
+
+/* Staff incomplete for booking page */
+.staff-booking-warn{margin:10px 0;padding:10px 12px;border-radius:10px;background:#fff4e5;border:1px solid #f0c36d;color:#5c4400}
+.staff-booking-warn p{margin:0 0 8px;font-weight:600;line-height:1.4}
+.staff-warn-actions{display:flex;flex-wrap:wrap;gap:8px}
+.staff-gap-badge{color:#a15c00;font-weight:700;font-size:.85rem}
+.staff-card.staff-incomplete{border-color:#f0c36d}
+.staff-add-hint{margin:0 0 10px;font-size:.9rem}
