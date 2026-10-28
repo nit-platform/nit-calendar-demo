@@ -6,7 +6,7 @@
 // Every value from the server is inserted as text (textContent / text nodes), never as HTML.
 import { api, friendlyError } from './api.js';
 import { $, h, muted, providerLabel, toast } from './ui.js';
-import { getSlug, canonicalize } from './router.js';
+import { getSlug, canonicalize, hasAuthCallback } from './router.js';
 import { initBooking, selectStaff, selection } from './booking.js';
 import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
 import { renderManage } from './manage.js';
@@ -35,9 +35,6 @@ async function refreshAuthBar(slug) {
   const status = $('#auth-status');
   const note = $('#book-auth-note');
   const myStep = $('#my-appts-step');
-  const signinStep = $('#signin-step');
-  const signinMsg = $('#signin-msg');
-  const bookGoogle = $('#book-google');
   if (session) {
     const name = customerDisplayName(session);
     btnIn.classList.add('hidden');
@@ -46,7 +43,6 @@ async function refreshAuthBar(slug) {
     user.textContent = name;
     if (status) { status.textContent = 'מחוברים'; status.classList.remove('hidden'); }
     if (note) note.classList.remove('hidden');
-    if (signinStep) signinStep.classList.add('hidden');
     if (myStep && slug) {
       myStep.classList.remove('hidden');
       try {
@@ -69,18 +65,13 @@ async function refreshAuthBar(slug) {
     if (status) { status.textContent = 'לא מחוברים'; status.classList.remove('hidden'); }
     if (note) note.classList.add('hidden');
     if (myStep) myStep.classList.add('hidden');
-    if (signinStep) signinStep.classList.remove('hidden');
-    if (signinMsg) signinMsg.textContent = 'לא מחוברים';
-    if (bookGoogle) bookGoogle.classList.remove('hidden');
   }
 }
 
 function wireAuthBar() {
   const bar = $('#auth-bar');
-  const signinStep = $('#signin-step');
   if (!auth.googleSignInEnabled()) {
     if (bar) bar.classList.add('hidden');
-    if (signinStep) signinStep.classList.add('hidden');
     return;
   }
   if (!bar || bar.dataset.wired) return;
@@ -90,13 +81,15 @@ function wireAuthBar() {
     catch (e) { toast(friendlyError(e), true); }
   };
   $('#auth-google').addEventListener('click', startGoogle);
-  const bookGoogle = $('#book-google');
-  if (bookGoogle) bookGoogle.addEventListener('click', startGoogle);
   $('#auth-signout').addEventListener('click', async () => {
     await auth.signOutCustomer();
     await refreshAuthBar(_authSlug);
   });
-  auth.onAuthChange(() => { refreshAuthBar(_authSlug); });
+  auth.onAuthChange(() => {
+    // After PKCE exchange supabase strips ?code=; then restore pretty /b/<slug>.
+    if (_authSlug && !hasAuthCallback()) canonicalize(_authSlug);
+    refreshAuthBar(_authSlug);
+  });
 }
 
 
@@ -104,7 +97,8 @@ function notFound() { show('missing'); document.title = 'NIT – הדף לא נ�
 const isNotFound = (e) => /business not found|barber not found/.test(e?.message || '');
 
 function setTitle(main, biz) {
-  $('#barber-title').replaceChildren(main, Object.assign(document.createElement('span'), { textContent: 'קביעת תור' }));
+  const el = $('#business-title') || $('#barber-title');
+  el.replaceChildren(main, Object.assign(document.createElement('span'), { textContent: 'קביעת תור' }));
   $('#biz-name').textContent = biz;
 }
 
@@ -126,9 +120,11 @@ async function startBusiness(slug, biz, explicit) {
     $('#manage-back').href = location.pathname + '?b=' + encodeURIComponent(slug);
     return;
   }
+  // Settle OAuth return before painting auth status (wait for session / toast errors).
+  await auth.settleAuthReturn().catch(() => null);
   if (explicit) canonicalize(slug);
   wireAuthBar();
-  refreshAuthBar(slug).catch(() => {});
+  await refreshAuthBar(slug).catch(() => {});
   if (biz.waitlist_enabled !== false) initWaitlist(slug, selection);
   startInboxPolling(slug);
   setTitle(biz.business_name, '');

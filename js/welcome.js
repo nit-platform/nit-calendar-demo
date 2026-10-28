@@ -1,11 +1,12 @@
 // First-entry welcome overlay for business booking links (Decision 18 + Nadav steering).
 // Skip is sessionStorage only (per tab); returning Supabase session skips entirely.
 import * as auth from './auth.js';
-import { $ } from './ui.js';
+import { $, trapFocus } from './ui.js';
 import { toast } from './ui.js';
 import { friendlyError } from './api.js';
 
 const skipKey = (slug) => `nit-welcome-skip:${slug}`;
+let releaseTrap = null;
 
 export function hasWelcomeSkip(slug) {
   try { return sessionStorage.getItem(skipKey(slug)) === '1'; } catch { return false; }
@@ -19,8 +20,16 @@ export function clearWelcomeSkip(slug) {
 
 export function hideWelcome() {
   const overlay = $('#welcome-screen');
+  if (releaseTrap) { releaseTrap(); releaseTrap = null; }
   if (overlay) overlay.classList.add('hidden');
   document.body.classList.remove('welcome-open');
+  const restore = $('#auth-google') || $('#service-list') || $('#business-title') || $('#barber-title');
+  if (restore && typeof restore.focus === 'function') {
+    try {
+      if (!restore.hasAttribute('tabindex') && restore.id !== 'auth-google') restore.setAttribute('tabindex', '-1');
+      restore.focus();
+    } catch { /* ignore */ }
+  }
 }
 
 /** Show welcome on booking view only; never on offer/manage. */
@@ -35,18 +44,18 @@ export async function maybeShowWelcome(slug, businessName) {
   if (nameEl) nameEl.textContent = businessName || '';
   overlay.classList.remove('hidden');
   document.body.classList.add('welcome-open');
-  if (overlay.dataset.wired) return;
-  overlay.dataset.wired = '1';
-  $('#welcome-google')?.addEventListener('click', async () => {
-    // Persist skip before OAuth so return never loops the welcome screen.
-    setWelcomeSkip(slug);
-    try { await auth.signInWithGoogle(); }
-    catch (e) { toast(friendlyError(e), true); }
-  });
-  $('#welcome-skip')?.addEventListener('click', () => {
-    setWelcomeSkip(slug);
-    hideWelcome();
-  });
+  const skip = () => { setWelcomeSkip(slug); hideWelcome(); };
+  if (releaseTrap) releaseTrap();
+  releaseTrap = trapFocus(overlay, { onEscape: skip });
+  if (!overlay.dataset.wired) {
+    overlay.dataset.wired = '1';
+    $('#welcome-google')?.addEventListener('click', async () => {
+      setWelcomeSkip(slug);
+      try { await auth.signInWithGoogle(); }
+      catch (e) { toast(friendlyError(e), true); }
+    });
+    $('#welcome-skip')?.addEventListener('click', skip);
+  }
 }
 
 if (typeof window !== 'undefined') {

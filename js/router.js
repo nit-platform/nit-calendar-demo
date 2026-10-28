@@ -17,8 +17,19 @@ export function getSlug() {
   return SLUG_RE.test(raw) ? raw : null;
 }
 
-/** Show the canonical pretty URL /b/<slug> (keeps the #day hash). */
+/** True while the URL still carries an OAuth/PKCE (or implicit) callback payload. */
+export function hasAuthCallback() {
+  const q = new URLSearchParams(location.search);
+  if (q.has('code') || q.has('error') || q.has('error_description')) return true;
+  const h = location.hash || '';
+  // implicit grant / older supabase: tokens or error in the hash fragment
+  if (/(?:^[#&]|[#&])(?:access_token|refresh_token|error|provider_token)=/.test(h)) return true;
+  return false;
+}
+
+/** Show the canonical pretty URL /b/<slug> (keeps the #day hash). Skips while OAuth params present. */
 export function canonicalize(slug) {
+  if (hasAuthCallback()) return;
   const view = location.hash === '#day' ? '#day' : '';
   const pretty = `${siteBase()}b/${slug}${view}`;
   if (location.pathname + location.hash !== pretty) history.replaceState(null, '', pretty);

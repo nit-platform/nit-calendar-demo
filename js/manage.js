@@ -5,6 +5,22 @@ import { $, h, muted, toast, shekel } from './ui.js';
 import { fmtTime, fmtLongDate, todayISO, addDays } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 
+function askCancelConfirm() {
+  const dlg = $('#mg-confirm');
+  if (!dlg || typeof dlg.showModal !== 'function') {
+    return Promise.resolve(window.confirm('לבטל את התור?'));
+  }
+  return new Promise((resolve) => {
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      resolve(dlg.returnValue === 'yes');
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.returnValue = '';
+    dlg.showModal();
+  });
+}
+
 const STATUS = {
   pending: 'ממתין לאישור העסק',
   confirmed: 'מאושר',
@@ -70,7 +86,7 @@ export async function renderManage(slug, token, box) {
 
     const cancelBtn = $('#mg-cancel');
     if (cancelBtn) cancelBtn.onclick = async () => {
-      if (!confirm('לבטל את התור?')) return;
+      if (!(await askCancelConfirm())) return;
       cancelBtn.disabled = true;
       try {
         await api.appointmentCancel(slug, token);

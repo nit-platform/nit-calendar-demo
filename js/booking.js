@@ -97,7 +97,7 @@ function renderDateStrip() {
     h('button', { class: 'day-chip', type: 'button', 'aria-pressed': String(d === state.date), onclick: () => setDate(d) },
       h('small', {}, fmtShortWeekday(d)), dayOfMonth(d))));
   const sel = strip.querySelector('[aria-pressed=true]');
-  if (sel) strip.scrollLeft = sel.offsetLeft - strip.clientWidth / 2 + sel.offsetWidth / 2;
+  if (sel) try { sel.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch { /* ignore */ }
 }
 
 let slotReq = 0;
@@ -135,6 +135,7 @@ function renderSlots(rows) {
   for (const [label, list] of Object.entries(by)) if (list.length)
     parts.push(h('div', { class: 'slot-group' }, h('h3', {}, label), h('div', { class: 'slot-grid' }, list.map(btn))));
   box.replaceChildren(...parts);
+  try { box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* ignore */ }
 }
 
 async function openDialog(slot) {
