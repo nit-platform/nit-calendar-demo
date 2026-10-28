@@ -229,11 +229,17 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         const [svc] = await q(sb.from('services').insert({
           business_id: state.business.id, name, base_price: price, is_active: true,
         }).select('*'));
-        const steps = [{ service_id: svc.id, step_order: 1, name, duration_min: duration, is_blocking: true }];
+        // Every step must send the same keys: PostgREST multi-row INSERT unions columns and
+        // fills omissions with NULL, which breaks NOT NULL allow_overlap (see migration 27).
+        const steps = [{
+          service_id: svc.id, step_order: 1, name, duration_min: duration,
+          max_duration_min: null, is_blocking: true, wait_duration_mode: null, allow_overlap: false,
+        }];
         if (hasWait) {
           steps.push({
             service_id: svc.id, step_order: 2, name: 'המתנה', duration_min: waitMin,
-            max_duration_min: waitMax, is_blocking: false, wait_duration_mode: 'min', allow_overlap: false,
+            max_duration_min: waitMax, is_blocking: false, wait_duration_mode: 'min',
+            allow_overlap: true, // wait/gap: match services editor default (may place short guest)
           });
         }
         await q(sb.from('service_steps').insert(steps).select('id'));
@@ -252,7 +258,9 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
   }
 
   async function step5(card) {
-    const suggested = suggestSlug(state.business.name) || state.business.public_slug || '';
+    const currentSlug = (state.business.public_slug || '').toLowerCase();
+    // Hebrew names often yield no Latin suggestion — fall back to the auto b-xxxxxxxxxxxx slug.
+    const suggested = suggestSlug(state.business.name) || currentSlug || '';
     const input = h('input', {
       name: 'slug', id: 'onboard-slug', value: suggested, dir: 'ltr', required: true,
       minlength: '3', maxlength: '40', pattern: '[a-z0-9][a-z0-9\\-]*[a-z0-9]',
@@ -267,8 +275,15 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       preview.textContent = slug ? bookingUrl(slug) : '';
       const local = slugError(slug);
       if (local) { status.textContent = local; status.className = 'form-error'; return false; }
+      // Slug already owned by this business is available (skip RPC / rate limit).
+      if (currentSlug && slug === currentSlug) {
+        status.textContent = 'פנוי'; status.className = 'muted ok'; return true;
+      }
       try {
-        const res = await rpc('owner_slug_available', { p_slug: slug });
+        const res = await rpc('owner_slug_available', {
+          p_slug: slug,
+          p_business_id: state.business.id,
+        });
         if (res === 'available') { status.textContent = 'פנוי'; status.className = 'muted ok'; return true; }
         if (res === 'taken') { status.textContent = 'הקישור הזה כבר תפוס.'; status.className = 'form-error'; return false; }
         status.textContent = 'קישור לא תקין.'; status.className = 'form-error'; return false;
@@ -291,9 +306,15 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     form.querySelector('#onboard-skip-slug').addEventListener('click', () => go(6));
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); showErr(form, '');
+      const slug = input.value.trim().toLowerCase();
+      // Unchanged auto/current slug: keep as-is and continue (no update needed).
+      if (currentSlug && slug === currentSlug) {
+        toast('הקישור נשמר');
+        await go(6);
+        return;
+      }
       const okAvail = await check();
       if (!okAvail) return;
-      const slug = input.value.trim().toLowerCase();
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       try {
         const [row] = await q(sb.from('businesses').update({ public_slug: slug })
