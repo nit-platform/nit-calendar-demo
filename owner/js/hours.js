@@ -1,13 +1,14 @@
 // Working hours per barber + time off (recurring breaks and one-off absences).
 import { sb, q, heError, hhmm, WEEKDAYS, parseRange, localToTs, tsToLocal } from './sb.js';
 import { h, muted, toast, providerLabel } from '../../js/ui.js';
+import { refreshSetupBanner } from './app.js';
 
 let staffId = null;
 const KINDS = { break: 'הפסקה', vacation: 'חופשה', sick: 'מחלה', other: 'אחר' };
 const time = (name, value) => h('input', { type: 'time', name, value: hhmm(value), required: true, step: 300 });
 
 async function guarded(fn, ok, rerender) {
-  try { await fn(); toast(ok); rerender(); } catch (e) { toast(heError(e), true); }
+  try { await fn(); await refreshSetupBanner(); toast(ok); rerender(); } catch (e) { toast(heError(e), true); }
 }
 
 export async function renderHours(root, ctx) {

@@ -3,6 +3,7 @@
 // owner-only guard trigger, migration 000011). All values are inserted as text, never as HTML.
 import { sb, q, heError, ownerUrl } from './sb.js';
 import { h, toast } from '../../js/ui.js';
+import { refreshSetupBanner } from './app.js';
 
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 // Keep in sync with businesses_public_slug_check (20261026000011_business_booking_link.sql).
@@ -37,13 +38,14 @@ function slugSaveError(err) {
 
 export function renderBookingLink(ctx) {
   const b = ctx.business;
-  const link = h('a', { id: 'booking-url', href: bookingUrl(b.public_slug), target: '_blank', rel: 'noopener', dir: 'ltr' }, bookingUrl(b.public_slug));
+  const href = b.public_slug ? bookingUrl(b.public_slug) : '';
+  const link = h('a', { id: 'booking-url', href: href || '#', target: '_blank', rel: 'noopener', dir: 'ltr' }, href || 'עדיין אין קישור — בחרו מזהה למטה');
   const copyBtn = h('button', { type: 'button', class: 'btn', id: 'booking-copy' }, 'העתקה');
   copyBtn.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(link.href); toast('הקישור הועתק'); }
     catch { toast('לא ניתן להעתיק אוטומטית – סמנו את הקישור והעתיקו ידנית', true); }
   });
-  const input = h('input', { name: 'public_slug', id: 'booking-slug', value: b.public_slug, required: true, dir: 'ltr',
+  const input = h('input', { name: 'public_slug', id: 'booking-slug', value: b.public_slug || '', required: true, dir: 'ltr',
     minlength: 3, maxlength: 40, pattern: '[a-z0-9][a-z0-9\\-]*[a-z0-9]', autocomplete: 'off', spellcheck: 'false',
     title: '3–40 תווים: a-z, 0-9, מקף' });
   const err = h('p', { class: 'form-error', id: 'booking-slug-error', role: 'alert' });
@@ -63,6 +65,7 @@ export function renderBookingLink(ctx) {
       if (!row) throw new Error('permission denied');
       Object.assign(ctx.business, row);
       link.href = bookingUrl(row.public_slug); link.textContent = link.href;
+      await refreshSetupBanner();
       toast('הקישור עודכן. קישורים ישנים כבר לא יעבדו.'); }
     catch (ex) { err.textContent = slugSaveError(ex); } });
   return form;

@@ -81,5 +81,5 @@ export async function renderSettings(root, ctx) {
     try { const rows = await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id'));
       if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
-  root.replaceChildren(...(b.public_slug ? [renderBookingLink(ctx)] : []), bizForm, polForm, renderHolidays(ctx));
+  root.replaceChildren(renderBookingLink(ctx), bizForm, polForm, renderHolidays(ctx));
 }
