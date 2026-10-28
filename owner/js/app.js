@@ -113,12 +113,57 @@ $('#logout').addEventListener('click', async () => { await sb.auth.signOut(); lo
 let current = 'calendar';
 export async function openTab(name) {
   current = name;
-  for (const b of document.querySelectorAll('#tabs [role=tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+  for (const b of document.querySelectorAll('#tabs [role=tab]')) {
+    const on = b.dataset.tab === name;
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
   show(name);
   const root = $('#view-' + name);
   try { await TABS[name](root, ctx); } catch (e) { root.replaceChildren(Object.assign(document.createElement('div'), { className: 'card', textContent: heError(e) })); }
+  refreshTabsOverflow();
 }
 $('#tabs').addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (t) openTab(t.dataset.tab); });
+
+/** B4: ArrowLeft/Right reverse in RTL; Home/End; roving tabindex. */
+$('#tabs').addEventListener('keydown', (e) => {
+  const tabs = [...document.querySelectorAll('#tabs [role=tab]')];
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  const rtl = getComputedStyle(document.documentElement).direction === 'rtl';
+  let next = -1;
+  if (e.key === 'ArrowRight') next = rtl ? i - 1 : i + 1;
+  else if (e.key === 'ArrowLeft') next = rtl ? i + 1 : i - 1;
+  else if (e.key === 'Home') next = 0;
+  else if (e.key === 'End') next = tabs.length - 1;
+  else return;
+  e.preventDefault();
+  const t = tabs[(next + tabs.length) % tabs.length];
+  t.focus();
+  openTab(t.dataset.tab);
+});
+
+function refreshTabsOverflow() {
+  const wrap = $('#tabs-wrap');
+  const tabs = $('#tabs');
+  const more = $('#tabs-more');
+  if (!wrap || !tabs || wrap.classList.contains('hidden')) return;
+  const overflowing = tabs.scrollWidth > tabs.clientWidth + 4;
+  wrap.classList.toggle('overflowing', overflowing);
+  if (more && !more.dataset.wired) {
+    more.dataset.wired = '1';
+    more.addEventListener('click', () => {
+      // Scroll toward the visually-trailing tabs (inline-start in RTL = left in LTR terms for "more")
+      const max = tabs.scrollWidth - tabs.clientWidth;
+      const rtl = getComputedStyle(document.documentElement).direction === 'rtl';
+      // In RTL, increasing scrollLeft moves toward the start of the DOM (calendar); "עוד" reveals trailing tabs.
+      tabs.scrollTo({ left: rtl ? -max : max, behavior: 'smooth' });
+      const last = tabs.querySelector('[role=tab]:last-child');
+      last?.focus();
+    });
+  }
+}
+window.addEventListener('resize', () => refreshTabsOverflow());
 
 // ---------- nobiz (K3) + onboard (K1) ----------
 async function enterDashboard(business) {
@@ -127,13 +172,14 @@ async function enterDashboard(business) {
   await reloadContext();
   $('#biz-name').textContent = ctx.business.name;
   document.title = `${ctx.business.name} – ניהול`;
-  $('#tabs').classList.remove('hidden');
+  $('#tabs-wrap').classList.remove('hidden');
+  refreshTabsOverflow();
   await refreshSetupBanner();
-  openTab(current);
+  await openTab(current);
 }
 
 async function openOnboard() {
-  $('#tabs').classList.add('hidden');
+  $('#tabs-wrap').classList.add('hidden');
   $('#biz-name').textContent = '';
   $('#setup-banner')?.classList.add('hidden');
   show('onboard');

@@ -7,6 +7,30 @@ const st = { staffId: null, date: todayISO(), mode: 'day' };
 const PX = 1.6; // px per minute
 const STATUS = { pending: 'ממתין', confirmed: 'מאושר', cancelled: 'בוטל', completed: 'הושלם', no_show: 'לא הגיע' };
 const KIND = { work: 'עבודה', wait: 'המתנה', buffer: 'מרווח' };
+
+/** B6: branded Hebrew <dialog> instead of window.confirm for reject/cancel. */
+function askDangerConfirm({ title, body, yesLabel }) {
+  const dlg = $('#danger-confirm');
+  if (!dlg || typeof dlg.showModal !== 'function') {
+    return Promise.resolve(window.confirm(body || title || 'לאשר?'));
+  }
+  const t = $('#danger-confirm-title');
+  const b = $('#danger-confirm-body');
+  const y = $('#danger-confirm-yes');
+  if (t) t.textContent = title || 'אישור';
+  if (b) b.textContent = body || '';
+  if (y) y.textContent = yesLabel || 'כן, בטל';
+  return new Promise((resolve) => {
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      resolve(dlg.returnValue === 'yes');
+    };
+    dlg.addEventListener('close', onClose);
+    dlg.returnValue = '';
+    dlg.showModal();
+  });
+}
+
 const weekday = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
 
 async function dayInfo(staffId, businessId, iso) {
@@ -68,9 +92,13 @@ function openAppt(a, ctx, rerender) {
     h('div', { class: 'actions' },
       h('button', { class: 'btn ghost', value: 'close' }, 'סגירה'),
       pending ? h('button', { type: 'button', class: 'btn primary', onclick: () => confirmAppt(true) }, 'אישור תור') : null,
-      pending ? h('button', { type: 'button', class: 'btn danger', onclick: () => confirm('לדחות את הבקשה?') && confirmAppt(false) }, 'דחייה') : null,
+      pending ? h('button', { type: 'button', class: 'btn danger', id: 'appt-reject', onclick: async () => {
+        if (await askDangerConfirm({ title: 'דחיית בקשה?', body: 'לדחות את הבקשה? השעה תתפנה.', yesLabel: 'כן, דחו' })) await confirmAppt(false);
+      } }, 'דחייה') : null,
       closed || pending ? null : h('button', { type: 'button', class: 'btn outline', id: 'appt-noshow', onclick: () => act('no_show') }, 'לא הגיע'),
-      closed || pending ? null : h('button', { type: 'button', class: 'btn danger', id: 'appt-cancel', onclick: () => confirm('לבטל את התור?') && act('cancelled') }, 'ביטול תור')));
+      closed || pending ? null : h('button', { type: 'button', class: 'btn danger', id: 'appt-cancel', onclick: async () => {
+        if (await askDangerConfirm({ title: 'ביטול התור?', body: 'לבטל את התור?', yesLabel: 'כן, בטל' })) await act('cancelled');
+      } }, 'ביטול תור')));
   $('#appt-dialog').showModal();
 }
 
@@ -98,8 +126,10 @@ async function renderDay(box, ctx, rerender) {
   }
   for (let m = from; m <= to; m += 60) tl.append(h('div', { class: 'hr', style: `top:${y(m)}px` }, h('span', {}, minToHHMM(m))));
   for (const a of appts) for (const s of a.segs) {
-    const top = y(minutesOfDay(s.seg_start)), ht = Math.max(((new Date(s.seg_end) - new Date(s.seg_start)) / 60000) * PX - 1, 10);
-    const cls = `blk ${s.kind} ${s.is_dead_time_fill ? 'fill' : ''} st-${a.status}`;
+    const top = y(minutesOfDay(s.seg_start));
+    const ht = Math.max(((new Date(s.seg_end) - new Date(s.seg_start)) / 60000) * PX - 1, 28);
+    const short = ht < 44 ? ' short' : '';
+    const cls = `blk ${s.kind}${short} ${s.is_dead_time_fill ? 'fill' : ''} st-${a.status}`;
     tl.append(h('button', { type: 'button', class: cls, 'data-appt': a.id, style: `top:${top}px;height:${ht}px`, onclick: () => openAppt(a, ctx, rerender) },
       s.kind === 'buffer' ? '' : `${fmtTime(s.seg_start)} ${a.customer || ''} · ${s.kind === 'wait' ? '⏳ ' : ''}${s.step_name}`));
   }
@@ -139,13 +169,13 @@ export async function renderCalendar(root, ctx) {
     h('div', { class: 'card toolbar' },
       h('select', { id: 'cal-staff', 'aria-label': providerLabel(ctx.business), onchange: (e) => { st.staffId = e.target.value; rerender(); } },
         staff.map((s) => h('option', { value: s.id, selected: s.id === st.staffId }, s.display_name))),
-      h('div', { class: 'seg' }, ['day', 'week'].map((m) => h('button', { 'aria-pressed': String(st.mode === m), id: 'mode-' + m,
+      h('div', { class: 'seg', role: 'group', 'aria-label': 'תצוגה' }, ['day', 'week'].map((m) => h('button', { type: 'button', 'aria-pressed': String(st.mode === m), id: 'mode-' + m,
         onclick: () => { st.mode = m; rerender(); } }, m === 'day' ? 'יום' : 'שבוע'))),
       h('div', { class: 'date-row', style: 'flex:1 1 100%' },
-        h('button', { class: 'icon-btn', 'aria-label': 'קודם', onclick: () => { st.date = addDays(st.date, -step); rerender(); } }, '›'),
-        h('input', { type: 'date', id: 'cal-date', value: st.date, onchange: (e) => { if (e.target.value) { st.date = e.target.value; rerender(); } } }),
-        h('button', { class: 'icon-btn', 'aria-label': 'הבא', onclick: () => { st.date = addDays(st.date, step); rerender(); } }, '‹'),
-        h('button', { class: 'btn small outline', onclick: () => { st.date = todayISO(); rerender(); } }, 'היום'))),
+        h('button', { class: 'icon-btn', id: 'cal-prev', type: 'button', 'aria-label': st.mode === 'week' ? 'שבוע קודם' : 'יום קודם', onclick: () => { st.date = addDays(st.date, -step); rerender(); } }, '◀'),
+        h('input', { type: 'date', id: 'cal-date', value: st.date, 'aria-label': 'תאריך', onchange: (e) => { if (e.target.value) { st.date = e.target.value; rerender(); } } }),
+        h('button', { class: 'icon-btn', id: 'cal-next', type: 'button', 'aria-label': st.mode === 'week' ? 'שבוע הבא' : 'יום הבא', onclick: () => { st.date = addDays(st.date, step); rerender(); } }, '▶'),
+        h('button', { class: 'btn small outline', type: 'button', onclick: () => { st.date = todayISO(); rerender(); } }, 'היום'))),
     body);
   body.append(muted('טוען…'));
   try { await (st.mode === 'week' ? renderWeek(body, ctx) : renderDay(body, ctx, rerender)); }
