@@ -179,19 +179,20 @@ function refreshTabsOverflow() {
 window.addEventListener('resize', () => refreshTabsOverflow());
 
 // ---------- nobiz (K3) + onboard (K1) ----------
-/** B7: show <select> only when the signed-in user is a member of 2+ businesses (RLS-filtered list). */
+/** B7: show <select> (plus '+ new business') when the user is a member of 1+ businesses (RLS-filtered list). */
 function renderBizSwitcher(list) {
   const wrap = $('#biz-switch-wrap');
   const sel = $('#biz-switch');
   if (!wrap || !sel) return;
   ctx.businesses = list || [];
-  if (ctx.businesses.length < 2) {
+  if (ctx.businesses.length < 1) {
     wrap.classList.add('hidden');
     sel.replaceChildren();
     return;
   }
   sel.replaceChildren(...ctx.businesses.map((b) =>
-    h('option', { value: b.id, selected: ctx.business && b.id === ctx.business.id }, b.name)));
+    h('option', { value: b.id, selected: ctx.business && b.id === ctx.business.id }, b.name)),
+    h('option', { value: '__new__' }, '+ פתיחת עסק נוסף'));
   wrap.classList.remove('hidden');
 }
 
@@ -280,6 +281,14 @@ async function start() {
     await enterDashboard(businesses.find((b) => b.id === saved) || businesses[0]);
   } catch (e) { show('nobiz'); toast(heError(e), true); await refreshSetupBanner(); }
 }
-$('#biz-switch')?.addEventListener('change', (e) => { switchBusiness(e.target.value); });
+$('#biz-switch')?.addEventListener('change', (e) => {
+  if (e.target.value === '__new__') {
+    if (ctx.business) e.target.value = ctx.business.id;
+    $('#biz-switch-wrap')?.classList.add('hidden');
+    openOnboard();
+    return;
+  }
+  switchBusiness(e.target.value);
+});
 sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') show('login'); });
 start();
