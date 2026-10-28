@@ -95,3 +95,19 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .settings-sec .sec-body{padding:0 14px 14px;display:grid;gap:6px}
 .policy-card{padding-bottom:4px}
 .policy-sticky{position:sticky;bottom:0;z-index:5;background:var(--card,#fff);border-top:1px solid #ececef;margin:8px -16px 0;padding:10px 16px;box-shadow:0 -4px 12px rgba(0,0,0,.04)}
+/* B1 services: simple/advanced + timeline + confirm */
+.svc-timeline{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px;padding:8px;background:#f6f8fb;border-radius:10px;border:1px solid #e4ebf5}
+.svc-tl-chip{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 10px;border-radius:8px;font-size:.85rem;font-weight:600;line-height:1.2}
+.svc-tl-chip small{font-weight:500;opacity:.8;font-size:.75rem}
+.svc-tl-chip.work{background:var(--work,#3b82f6);color:#fff}
+.svc-tl-chip.wait{background:repeating-linear-gradient(135deg,var(--wait,#cfe3f7) 0 8px,#e2eefa 8px 16px);color:#1f3a5f;border:1px dashed #7aa7d6}
+.svc-tl-arrow{color:var(--muted,#888);font-weight:700;padding:0 2px}
+.hint-btn{font:inherit;font-size:.75rem;font-weight:700;width:22px;height:22px;min-width:22px;min-height:22px;border-radius:50%;border:1.5px solid #c5c5ca;background:#fff;color:#555;cursor:pointer;padding:0;line-height:1;margin-inline-start:4px}
+.hint-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.wait-check{flex-wrap:wrap}
+.svc-mode-btn{margin-top:6px}
+.svc-simple-hint{margin:4px 0 0;font-size:.85rem}
+.svc-guests.hidden,.svc-mode-btn.hidden,.svc-simple-hint.hidden,.btn.hidden,.step-adv.hidden{display:none}
+.visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.svc-confirm-form{padding:18px;display:grid;gap:12px}
+.svc-confirm-form h2{margin:0;font-size:1.1rem}
