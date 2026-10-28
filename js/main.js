@@ -99,6 +99,8 @@ async function startBusiness(slug, biz, explicit) {
     return;
   }
   if (explicit) canonicalize(slug);
+  wireAuthBar();
+  refreshAuthBar(slug).catch(() => {});
   if (biz.waitlist_enabled !== false) initWaitlist(slug, selection);
   startInboxPolling(slug);
   setTitle(biz.business_name, '');
