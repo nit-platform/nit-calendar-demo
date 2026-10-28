@@ -1,5 +1,5 @@
 .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.btn.link{background:transparent;color:#fff;text-decoration:underline;padding:4px 0;font-weight:400}
+.btn.link{background:transparent;color:#fff;text-decoration:underline;padding:8px 12px;font-weight:400;min-height:44px}
 .tabs-wrap{position:relative;margin:0 -16px}
 .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;margin:0;padding:0 12px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(to left,transparent,#000 16px,#000 calc(100% - 16px),transparent);-webkit-mask-image:linear-gradient(to left,transparent,#000 16px,#000 calc(100% - 16px),transparent)}
 .tabs-more{display:none;position:absolute;inset-block:0;inset-inline-start:0;z-index:2;padding-inline:10px;border:0;background:linear-gradient(to left,transparent,var(--brand,#1a4fb0) 40%);color:#fff;font:inherit;font-weight:700;cursor:pointer;min-height:44px;min-width:44px}
@@ -11,7 +11,8 @@
 .tab-view{display:grid;gap:12px}
 .login{display:grid;gap:12px;max-width:420px;margin:0 auto}
 .login form{display:grid;gap:10px}
-.btn.google{background:#fff;color:#1d1d1f;border:1.5px solid #d7d7dc}
+.btn.google{background:#fff;color:#1d1d1f;border:1.5px solid #d7d7dc;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px}
+.btn.google .google-g{flex:0 0 auto}
 .or{text-align:center;color:var(--muted);margin:0;font-size:.9rem}
 label{display:grid;gap:4px;font-weight:600;font-size:.9rem}
 input,select,textarea{font:inherit;padding:8px;border:1.5px solid #d7d7dc;border-radius:10px;background:#fff;min-width:0}
@@ -49,8 +50,9 @@ input[type=checkbox]{width:20px;height:20px;padding:0}
 .wday{background:var(--card);border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
 .wday h3{margin:0 0 6px;font-size:.95rem;display:flex;justify-content:space-between}
 .wday h3 button{font:inherit;font-size:.82rem;background:none;border:0;color:var(--brand-2);cursor:pointer;text-decoration:underline}
-.appt-line{display:flex;gap:8px;align-items:baseline;font-size:.88rem;padding:4px 0;border-top:1px solid #f0f0f2;cursor:pointer}
+.appt-line{display:flex;gap:8px;align-items:baseline;font-size:.88rem;padding:8px 4px;border:0;border-top:1px solid #f0f0f2;cursor:pointer;background:transparent;font:inherit;color:inherit;width:100%;text-align:start;min-height:44px;box-sizing:border-box;border-radius:8px}
 .appt-line:first-of-type{border-top:0}
+.appt-line:focus-visible{outline:2px solid var(--brand-2,#0b57d0);outline-offset:2px}
 .appt-line time{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .appt-line small{color:var(--muted)}
 .tag{display:inline-block;border-radius:6px;padding:0 6px;font-size:.75rem;font-weight:700;background:#ececef}
@@ -123,3 +125,24 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 /* B6 branded danger confirm (cancel / reject) */
 .danger-confirm-form{padding:18px;display:grid;gap:12px}
 .danger-confirm-form h2{margin:0;font-size:1.1rem}
+
+/* B7 multi-business switcher */
+.biz-switch-wrap{display:flex;align-items:center;gap:8px;margin:4px 0 8px}
+.biz-switch-wrap.hidden{display:none}
+.biz-switch-label{font-size:.85rem;font-weight:600;color:rgba(255,255,255,.85);margin:0}
+#biz-switch{font:inherit;min-height:44px;min-width:160px;max-width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff}
+#biz-switch option{color:#1d1d1f;background:#fff}
+
+/* B2 hours templates */
+.hours-tpl-row{gap:8px}
+.hours-tpl-row .btn{min-height:44px}
+
+/* B11 field hints under optional policy inputs */
+.field-hint{display:block;font-weight:400;font-size:.8rem;margin-top:2px}
+.field-error{display:block;margin-top:2px}
+.field-error.hidden{display:none}
+
+/* C4: primary = one main action per card; ghost/outline for secondary */
+.card > .actions .btn.primary{order:2}
+.card > .actions .btn:not(.primary){order:1}
+.otp-hint{margin:0;font-size:.88rem}
