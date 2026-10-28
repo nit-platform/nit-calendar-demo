@@ -20,4 +20,4 @@ export const DEFAULT_BUSINESS_SLUG = 'nit-demo';
 // Customer Google sign-in on the booking page. Provider is enabled on the project;
 // new-user signup may still be blocked project-wide (see docs/customer_google_signin.md).
 // Flip to false to hide the UI without a redeploy of Auth settings.
-export const GOOGLE_SIGNIN_ENABLED = false;
+export const GOOGLE_SIGNIN_ENABLED = true;
