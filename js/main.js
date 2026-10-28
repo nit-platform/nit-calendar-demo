@@ -21,7 +21,7 @@ function customerDisplayName(session) {
   const u = session?.user;
   if (!u) return '';
   const md = u.user_metadata || {};
-  return (md.full_name || md.name || u.email || 'מחוברים').trim();
+  return (md.full_name || md.name || u.email || 'מחובר').trim();
 }
 
 let _authSlug = null;
@@ -41,7 +41,7 @@ async function refreshAuthBar(slug) {
     btnOut.classList.remove('hidden');
     user.classList.remove('hidden');
     user.textContent = name;
-    if (status) { status.textContent = 'מחוברים'; status.classList.remove('hidden'); }
+    if (status) { status.textContent = 'מחובר'; status.classList.remove('hidden'); }
     if (note) note.classList.remove('hidden');
     if (myStep && slug) {
       myStep.classList.remove('hidden');
@@ -62,7 +62,7 @@ async function refreshAuthBar(slug) {
     btnOut.classList.add('hidden');
     user.classList.add('hidden');
     user.textContent = '';
-    if (status) { status.textContent = 'לא מחוברים'; status.classList.remove('hidden'); }
+    if (status) { status.textContent = 'לא מחובר'; status.classList.remove('hidden'); }
     if (note) note.classList.add('hidden');
     if (myStep) myStep.classList.add('hidden');
   }
