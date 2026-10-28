@@ -1,14 +1,17 @@
 <!doctype html>
 <html lang="he" dir="rtl"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fvk4P5X6/UYLgA+R8q/HFf5+ljpDxRZ397RKC9NKOFI='; style-src 'sha256-RUdbR+uHgDJyySQ3L0sJ9U5wz/S65BtpAizAs/IWFII='; object-src 'none'; base-uri 'none'; form-action 'none'"><title>NIT</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-BXE5KFsgJVsari9rGz201FxZ2Z648DUGX9s+nBWOETU='; style-src 'sha256-RUdbR+uHgDJyySQ3L0sJ9U5wz/S65BtpAizAs/IWFII='; object-src 'none'; base-uri 'none'; form-action 'none'"><title>NIT</title>
 <script>
   // GitHub Pages SPA trick: /<base>/b/<slug> has no file, so Pages serves this 404.html.
-  // Redirect to /<base>/?b=<slug>; index.html then restores the pretty /b/<slug> URL.
+  // Redirect to /<base>/?b=<slug>…; preserve OAuth ?code=/state (and hash tokens) so supabase-js can exchange.
   (function () {
     var p = location.pathname, i = p.indexOf('/b/');
     if (i >= 0) {
       var slug = p.slice(i + 3).split('/')[0];
-      location.replace(p.slice(0, i + 1) + '?b=' + encodeURIComponent(slug) + location.hash);
+      var q = new URLSearchParams(location.search);
+      q.set('b', decodeURIComponent(slug));
+      var qs = q.toString();
+      location.replace(p.slice(0, i + 1) + (qs ? '?' + qs : '') + location.hash);
     }
   })();
 </script>
