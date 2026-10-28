@@ -62,7 +62,7 @@ function staffCard(st, ctx, label, rerender) {
     try {
       const patch = { display_name: v.name, is_active: st ? form.is_active.checked : true };
       if (st) await q(sb.from('staff').update(patch).eq('id', st.id).select('id'));
-      else await q(sb.from('staff').insert({ ...patch, business_id: ctx.business.id, role: 'barber' }).select('id'));
+      else await q(sb.from('staff').insert({ ...patch, business_id: ctx.business.id, role: 'provider' }).select('id'));
       await reloadContext(); await refreshSetupBanner(); toast(st ? 'נשמר' : 'נוסף'); rerender();
     } catch (err) {
       errEl.textContent = heError(err); errEl.classList.remove('hidden');

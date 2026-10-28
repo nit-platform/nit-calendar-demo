@@ -136,7 +136,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       const btn = form.querySelector('#onboard-add-staff'); btn.disabled = true;
       try {
         const [row] = await q(sb.from('staff').insert({
-          business_id: state.business.id, display_name: name, role: 'barber', is_active: true,
+          business_id: state.business.id, display_name: name, role: 'provider', is_active: true,
         }).select('*'));
         state.staff.push(row);
         form.display_name.value = '';
