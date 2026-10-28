@@ -33,10 +33,19 @@ export async function renderWaitlist(root, ctx) {
   const live = (o) => !o.response && new Date(o.expires_at) > new Date();
 
   const copyLink = async (o) => {
-    try { const token = await rpc('owner_offer_token', { p_offer_id: o.id });
+    try {
+      const token = await rpc('owner_offer_token', { p_offer_id: o.id });
       const u = new URL(bookingUrl(ctx.business.public_slug)); u.searchParams.set('offer', token);
-      await navigator.clipboard.writeText(u.toString()); toast('קישור ההצעה הועתק'); }
-    catch (e) { toast(heError(e), true); } };
+      const url = u.toString();
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('קישור ההצעה הועתק');
+      } catch {
+        // C6: clipboard blocked — same manual-copy hint as bookinglink.js
+        toast('לא ניתן להעתיק אוטומטית – סמנו את הקישור והעתיקו ידנית', true);
+      }
+    } catch (e) { toast(heError(e), true); }
+  };
 
   const active = entries.filter((e) => e.status === 'waiting' || e.status === 'offered');
   const entryItem = (e, i) => h('div', { class: 'item', 'data-entry-id': e.id },

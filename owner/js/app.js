@@ -99,7 +99,20 @@ $('#otp-email-form').addEventListener('submit', async (e) => {
   $('#otp-email-form').classList.add('hidden'); $('#otp-code-form').classList.remove('hidden');
   $('#otp-code-form [name=token]').focus();
 });
-$('#otp-back').addEventListener('click', () => { $('#otp-code-form').classList.add('hidden'); $('#otp-email-form').classList.remove('hidden'); });
+$('#otp-back').addEventListener('click', () => { $('#otp-code-form').classList.add('hidden'); $('#otp-email-form').classList.remove('hidden'); loginErr(); });
+// B9: resend OTP (email only — no SMS)
+$('#otp-resend')?.addEventListener('click', async () => {
+  loginErr();
+  if (!otpEmail) return loginErr('הזינו מייל קודם.');
+  const captcha = captchaToken();
+  if (!captcha) return loginErr('יש להשלים את בדיקת האבטחה (אני לא רובוט) ולנסות שוב.');
+  const btn = $('#otp-resend'); if (btn) btn.disabled = true;
+  const { error } = await sb.auth.signInWithOtp({ email: otpEmail, options: { shouldCreateUser: true, captchaToken: captcha } });
+  if (btn) btn.disabled = false; resetCaptcha();
+  if (error) return loginErr(heError(error));
+  $('#otp-sent').textContent = `שלחנו קוד חדש אל ${otpEmail}`;
+  toast('הקוד נשלח שוב');
+});
 $('#otp-code-form').addEventListener('submit', async (e) => {
   e.preventDefault(); loginErr();
   const token = new FormData(e.target).get('token').trim();
@@ -166,6 +179,29 @@ function refreshTabsOverflow() {
 window.addEventListener('resize', () => refreshTabsOverflow());
 
 // ---------- nobiz (K3) + onboard (K1) ----------
+/** B7: show <select> only when the signed-in user is a member of 2+ businesses (RLS-filtered list). */
+function renderBizSwitcher(list) {
+  const wrap = $('#biz-switch-wrap');
+  const sel = $('#biz-switch');
+  if (!wrap || !sel) return;
+  ctx.businesses = list || [];
+  if (ctx.businesses.length < 2) {
+    wrap.classList.add('hidden');
+    sel.replaceChildren();
+    return;
+  }
+  sel.replaceChildren(...ctx.businesses.map((b) =>
+    h('option', { value: b.id, selected: ctx.business && b.id === ctx.business.id }, b.name)));
+  wrap.classList.remove('hidden');
+}
+
+async function switchBusiness(id) {
+  const b = (ctx.businesses || []).find((x) => x.id === id);
+  if (!b) { toast('אין הרשאה לעסק הזה', true); return; }
+  if (ctx.business && ctx.business.id === id) return;
+  await enterDashboard(b);
+}
+
 async function enterDashboard(business) {
   ctx.business = business;
   localStorage.setItem('nit-owner-business', business.id);
@@ -175,6 +211,7 @@ async function enterDashboard(business) {
   $('#tabs-wrap').classList.remove('hidden');
   refreshTabsOverflow();
   await refreshSetupBanner();
+  renderBizSwitcher(ctx.businesses || []);
   await openTab(current);
 }
 
@@ -190,11 +227,15 @@ async function openOnboard() {
       // If a draft business already exists, drop into the dashboard (B10 covers leftovers).
       try {
         const businesses = await q(sb.from('businesses').select('*').order('created_at'));
+        ctx.businesses = businesses;
         if (businesses.length) { await enterDashboard(businesses[businesses.length - 1]); return; }
       } catch (_) {}
       show('nobiz');
     },
-    onDone: async (business) => { await enterDashboard(business); },
+    onDone: async (business) => {
+      try { ctx.businesses = await q(sb.from('businesses').select('*').order('created_at')); } catch (_) { ctx.businesses = [business]; }
+      await enterDashboard(business);
+    },
   });
 }
 
@@ -207,6 +248,7 @@ function wireNobiz() {
     try {
       await rpc('claim_owner_invites', {});
       const businesses = await q(sb.from('businesses').select('*').order('created_at'));
+      ctx.businesses = businesses;
       if (!businesses.length) {
         if (err) { err.textContent = 'עדיין אין הזמנה למייל הזה. בקשו מבעל העסק להוסיף אתכם, או פתחו עסק חדש.'; err.classList.remove('hidden'); }
         return;
@@ -232,10 +274,12 @@ async function start() {
   try {
     await rpc('claim_owner_invites', {});            // links a verified, invited email to its business (idempotent)
     const businesses = await q(sb.from('businesses').select('*').order('created_at'));
-    if (!businesses.length) { show('nobiz'); await refreshSetupBanner(); return; }
+    ctx.businesses = businesses;
+    if (!businesses.length) { show('nobiz'); renderBizSwitcher([]); await refreshSetupBanner(); return; }
     const saved = localStorage.getItem('nit-owner-business');
     await enterDashboard(businesses.find((b) => b.id === saved) || businesses[0]);
   } catch (e) { show('nobiz'); toast(heError(e), true); await refreshSetupBanner(); }
 }
+$('#biz-switch')?.addEventListener('change', (e) => { switchBusiness(e.target.value); });
 sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') show('login'); });
 start();

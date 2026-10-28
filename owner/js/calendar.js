@@ -1,35 +1,13 @@
-// Daily + weekly calendar per barber, from owner_day_view (wait steps + appointments placed inside them).
+// Daily + weekly calendar per staff member, from owner_day_view (wait steps + appointments placed inside them).
 import { sb, q, rpc, heError, parseRange, hhmm } from './sb.js';
 import { $, h, muted, toast, providerLabel } from '../../js/ui.js';
+import { askDangerConfirm } from './confirm.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, minutesOfDay, hhmmToMin, minToHHMM } from '../../js/time.js';
 
 const st = { staffId: null, date: todayISO(), mode: 'day' };
 const PX = 1.6; // px per minute
 const STATUS = { pending: 'ממתין', confirmed: 'מאושר', cancelled: 'בוטל', completed: 'הושלם', no_show: 'לא הגיע' };
 const KIND = { work: 'עבודה', wait: 'המתנה', buffer: 'מרווח' };
-
-/** B6: branded Hebrew <dialog> instead of window.confirm for reject/cancel. */
-function askDangerConfirm({ title, body, yesLabel }) {
-  const dlg = $('#danger-confirm');
-  if (!dlg || typeof dlg.showModal !== 'function') {
-    return Promise.resolve(window.confirm(body || title || 'לאשר?'));
-  }
-  const t = $('#danger-confirm-title');
-  const b = $('#danger-confirm-body');
-  const y = $('#danger-confirm-yes');
-  if (t) t.textContent = title || 'אישור';
-  if (b) b.textContent = body || '';
-  if (y) y.textContent = yesLabel || 'כן, בטל';
-  return new Promise((resolve) => {
-    const onClose = () => {
-      dlg.removeEventListener('close', onClose);
-      resolve(dlg.returnValue === 'yes');
-    };
-    dlg.addEventListener('close', onClose);
-    dlg.returnValue = '';
-    dlg.showModal();
-  });
-}
 
 const weekday = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
 
@@ -150,11 +128,15 @@ async function renderWeek(box, ctx) {
     return h('div', { class: 'wday' },
       h('h3', {}, fmtLongDate(d),
         h('button', { onclick: () => { st.date = d; st.mode = 'day'; renderCalendar($('#view-calendar'), ctx); } }, 'יום מלא')),
-      appts.length ? appts.map((a) => h('div', { class: 'appt-line', onclick: () => openAppt(a, ctx, () => renderCalendar($('#view-calendar'), ctx)) },
-        h('time', {}, `${fmtTime(a.start)}–${fmtTime(a.end)}`), h('span', {}, a.customer || '—', ' ', h('small', {}, a.service)),
-        a.fill ? h('span', { class: 'tag fill' }, 'בהמתנה') : null,
-        a.segs.some((s) => s.kind === 'wait') ? h('small', {}, '⏳ ' + a.segs.filter((s) => s.kind === 'wait').map((s) => `${fmtTime(s.seg_start)}–${fmtTime(s.seg_end)}`).join(', ')) : null,
-        a.status !== 'confirmed' ? h('span', { class: `tag ${a.status}` }, STATUS[a.status]) : null)) : muted('אין תורים'));
+      appts.length ? appts.map((a) => {
+        const open = () => openAppt(a, ctx, () => renderCalendar($('#view-calendar'), ctx));
+        return h('button', { type: 'button', class: 'appt-line', onclick: open,
+          onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } } },
+          h('time', {}, `${fmtTime(a.start)}–${fmtTime(a.end)}`), h('span', {}, a.customer || '—', ' ', h('small', {}, a.service)),
+          a.fill ? h('span', { class: 'tag fill' }, 'בהמתנה') : null,
+          a.segs.some((s) => s.kind === 'wait') ? h('small', {}, '⏳ ' + a.segs.filter((s) => s.kind === 'wait').map((s) => `${fmtTime(s.seg_start)}–${fmtTime(s.seg_end)}`).join(', ')) : null,
+          a.status !== 'confirmed' ? h('span', { class: `tag ${a.status}` }, STATUS[a.status]) : null);
+      }) : muted('אין תורים'));
   })));
 }
 

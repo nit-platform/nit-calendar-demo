@@ -2,6 +2,7 @@
 import { sb, q, heError } from './sb.js';
 import { h, muted, toast, providerLabel } from '../../js/ui.js';
 import { reloadContext, refreshSetupBanner } from './app.js';
+import { askDangerConfirm } from './confirm.js';
 
 const NAME_MIN = 2;
 const NAME_MAX = 60;
@@ -25,14 +26,22 @@ function staffCard(st, ctx, label, rerender) {
     h('p', { class: 'form-error hidden', role: 'alert' }),
     h('div', { class: 'actions' },
       st ? h('button', { type: 'button', class: 'btn ghost staff-deactivate', onclick: async () => {
-        if (!confirm(`להשבית את "${st.display_name}"? (מומלץ במקום מחיקה אם יש תורים)`)) return;
+        if (!(await askDangerConfirm({
+          title: 'השבתת נותן שירות?',
+          body: `להשבית את "${st.display_name}"? (מומלץ במקום מחיקה אם יש תורים)`,
+          yesLabel: 'כן, השביתו',
+        }))) return;
         try {
           await q(sb.from('staff').update({ is_active: false }).eq('id', st.id).select('id'));
           await reloadContext(); await refreshSetupBanner(); toast('הושבת'); rerender();
         } catch (e) { toast(heError(e), true); }
       } }, 'השבתה') : null,
       st ? h('button', { type: 'button', class: 'btn ghost staff-delete', onclick: async () => {
-        if (!confirm(`למחוק את "${st.display_name}"? אם יש תורים, עדיף להשבית.`)) return;
+        if (!(await askDangerConfirm({
+          title: 'מחיקת נותן שירות?',
+          body: `למחוק את "${st.display_name}"? אם יש תורים, עדיף להשבית.`,
+          yesLabel: 'כן, מחקו',
+        }))) return;
         try {
           await q(sb.from('staff').delete().eq('id', st.id).select('id'));
           await reloadContext(); await refreshSetupBanner(); toast('נמחק'); rerender();

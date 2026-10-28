@@ -1,4 +1,5 @@
-// Working hours per barber + time off (recurring breaks and one-off absences).
+// Working hours per staff + time off (recurring breaks and one-off absences).
+// B2: quick templates (weekdays / Friday / Saturday closed) + apply-to-all-staff.
 import { sb, q, heError, hhmm, WEEKDAYS, parseRange, localToTs, tsToLocal } from './sb.js';
 import { h, muted, toast, providerLabel } from '../../js/ui.js';
 import { refreshSetupBanner } from './app.js';
@@ -11,6 +12,51 @@ async function guarded(fn, ok, rerender) {
   try { await fn(); await refreshSetupBanner(); toast(ok); rerender(); } catch (e) { toast(heError(e), true); }
 }
 
+/** Replace weekday ranges for one staff member (delete then insert). */
+async function setWeekdayHours(sid, weekday, ranges) {
+  await q(sb.from('working_hours').delete().eq('staff_id', sid).eq('weekday', weekday).select('id'));
+  if (!ranges.length) return;
+  await q(sb.from('working_hours').insert(ranges.map(([start_time, end_time]) => (
+    { staff_id: sid, weekday, start_time, end_time }))).select('id'));
+}
+
+async function applyTemplate(kind, sid, allStaffIds, rerender) {
+  const targets = allStaffIds && allStaffIds.length ? allStaffIds : [sid];
+  try {
+    for (const id of targets) {
+      if (kind === 'weekdays') {
+        for (let d = 0; d <= 4; d++) await setWeekdayHours(id, d, [['09:00', '17:00']]);
+      } else if (kind === 'friday') {
+        await setWeekdayHours(id, 5, [['09:00', '13:00']]);
+      } else if (kind === 'saturday') {
+        await setWeekdayHours(id, 6, []);
+      }
+    }
+    await refreshSetupBanner();
+    toast(targets.length > 1 ? 'התבנית הוחלה על כל הצוות' : 'התבנית הוחלה');
+    rerender();
+  } catch (e) { toast(heError(e), true); }
+}
+
+/** Copy current staff hours to every other active staff member. */
+async function applyHoursToAll(ctx, sid, rerender) {
+  try {
+    const rows = await q(sb.from('working_hours').select('weekday,start_time,end_time').eq('staff_id', sid));
+    const others = ctx.staff.filter((s) => s.id !== sid).map((s) => s.id);
+    if (!others.length) { toast('אין צוות נוסף להחלה'); return; }
+    for (const oid of others) {
+      await q(sb.from('working_hours').delete().eq('staff_id', oid).select('id'));
+      if (rows.length) {
+        await q(sb.from('working_hours').insert(rows.map((r) => (
+          { staff_id: oid, weekday: r.weekday, start_time: r.start_time, end_time: r.end_time }))).select('id'));
+      }
+    }
+    await refreshSetupBanner();
+    toast('השעות הוחלו על כל הצוות');
+    rerender();
+  } catch (e) { toast(heError(e), true); }
+}
+
 export async function renderHours(root, ctx) {
   if (!ctx.staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted(`לא הוגדר אף ${providerLabel(ctx.business)}.`))); return; }
   if (!ctx.staff.some((s) => s.id === staffId)) staffId = ctx.staff[0].id;
@@ -18,6 +64,23 @@ export async function renderHours(root, ctx) {
     q(sb.from('working_hours').select('*').eq('staff_id', staffId).order('weekday').order('start_time')),
     q(sb.from('time_off').select('*').eq('staff_id', staffId))]);
   const rerender = () => renderHours(root, ctx);
+  const allIds = ctx.staff.map((s) => s.id);
+
+  const templates = h('div', { class: 'card', id: 'hours-templates' },
+    h('h2', {}, 'תבניות מהירות'),
+    h('p', { class: 'muted' }, 'לחיצה מחליפה את השעות ליום/לימים שנבחרו. אפשר להחיל על כל הצוות.'),
+    h('div', { class: 'row hours-tpl-row' },
+      h('button', { type: 'button', class: 'btn primary', id: 'tpl-weekdays',
+        onclick: () => applyTemplate('weekdays', staffId, null, rerender) }, 'ימי חול 09:00–17:00'),
+      h('button', { type: 'button', class: 'btn', id: 'tpl-friday',
+        onclick: () => applyTemplate('friday', staffId, null, rerender) }, 'שישי 09:00–13:00'),
+      h('button', { type: 'button', class: 'btn', id: 'tpl-saturday',
+        onclick: () => applyTemplate('saturday', staffId, null, rerender) }, 'סגור בשבת')),
+    h('div', { class: 'actions' },
+      h('button', { type: 'button', class: 'btn outline', id: 'tpl-all-staff',
+        onclick: () => applyHoursToAll(ctx, staffId, rerender) }, 'החל על כל הצוות'),
+      h('button', { type: 'button', class: 'btn ghost', id: 'tpl-all-weekdays',
+        onclick: () => applyTemplate('weekdays', staffId, ctx.staff.map((s) => s.id), rerender) }, 'ימי חול לכל הצוות')));
 
   const hoursCard = h('div', { class: 'card', id: 'hours-card' }, h('h2', {}, 'שעות עבודה'),
     WEEKDAYS.map((dn, wd) => {
@@ -27,7 +90,8 @@ export async function renderHours(root, ctx) {
           rows.length ? rows.map((r) => {
             const f = h('form', { class: 'row', 'data-wh-id': r.id }, time('start_time', r.start_time), '–', time('end_time', r.end_time),
               h('button', { class: 'btn small primary' }, 'שמירה'),
-              h('button', { type: 'button', class: 'btn small ghost', onclick: () => guarded(() => q(sb.from('working_hours').delete().eq('id', r.id).select('id')), 'נמחק', rerender) }, '🗑'));
+              h('button', { type: 'button', class: 'btn small ghost', 'aria-label': 'מחיקה',
+                onclick: () => guarded(() => q(sb.from('working_hours').delete().eq('id', r.id).select('id')), 'נמחק', rerender) }, 'מחיקה'));
             f.addEventListener('submit', (e) => { e.preventDefault();
               guarded(() => q(sb.from('working_hours').update({ start_time: f.start_time.value, end_time: f.end_time.value }).eq('id', r.id).select('id')), 'נשמר', rerender); });
             return f;
@@ -39,7 +103,8 @@ export async function renderHours(root, ctx) {
 
   const recurring = offs.filter((o) => o.recurring_weekday != null).sort((a, b) => a.recurring_weekday - b.recurring_weekday || a.recurring_start.localeCompare(b.recurring_start));
   const periods = offs.filter((o) => o.period).map((o) => ({ ...o, r: parseRange(o.period) })).sort((a, b) => a.r[0] - b.r[0]);
-  const del = (o) => h('button', { type: 'button', class: 'btn small ghost', onclick: () => guarded(() => q(sb.from('time_off').delete().eq('id', o.id).select('id')), 'נמחק', rerender) }, '🗑');
+  const del = (o) => h('button', { type: 'button', class: 'btn small ghost', 'aria-label': 'מחיקה',
+    onclick: () => guarded(() => q(sb.from('time_off').delete().eq('id', o.id).select('id')), 'נמחק', rerender) }, 'מחיקה');
   const fmt = (d) => tsToLocal(d).replace('T', ' ');
 
   const breakForm = h('form', { class: 'row', id: 'break-form' },
@@ -63,6 +128,7 @@ export async function renderHours(root, ctx) {
   root.replaceChildren(
     h('div', { class: 'card toolbar' }, h('label', { style: 'flex:1' }, providerLabel(ctx.business), h('select', { id: 'hours-staff', onchange: (e) => { staffId = e.target.value; rerender(); } },
       ctx.staff.map((s) => h('option', { value: s.id, selected: s.id === staffId }, s.display_name))))),
+    templates,
     hoursCard,
     h('div', { class: 'card', id: 'breaks-card' }, h('h2', {}, 'הפסקות קבועות (כל שבוע)'),
       h('div', { class: 'list' }, recurring.length ? recurring.map((o) => h('div', { class: 'item' },

@@ -4,7 +4,6 @@ import { sb, q, heError, hhmm } from './sb.js';
 import { h, toast, DEFAULT_PROVIDER_LABEL, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 import { renderBookingLink } from './bookinglink.js';
-import { renderHolidays } from './holidays.js';
 
 // [column, label, type, extra]
 const BOOKING_FIELDS = [
@@ -21,8 +20,8 @@ const REMINDER_FIELDS = [
   ['reminder_confirm', 'הודעת אישור מיד אחרי קביעת תור', 'checkbox'],
   ['reminder_first_min', 'תזכורת ראשונה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
   ['reminder_second_min', 'תזכורת שנייה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
-  ['quiet_start', 'שעות שקט: מ-', 'time'],
-  ['quiet_end', 'שעות שקט: עד', 'time'],
+  ['quiet_start', 'שעות שקט: מ-', 'time', { optional: true, hint: 'ריק = כבוי (אין שעות שקט)' }],
+  ['quiet_end', 'שעות שקט: עד', 'time', { optional: true, hint: 'ריק או זהה להתחלה = כבוי' }],
   ['quiet_shabbat', 'לא לשלוח בשבת (מיום ו׳ 16:00)', 'checkbox'],
   ['quiet_holidays', 'לא לשלוח בחגים', 'checkbox'],
 ];
@@ -46,7 +45,14 @@ const NON_OWNER_NOTE = 'רק בעל/ת העסק יכול/ה לשנות את הה
 function input([col, label, type, extra = {}], val) {
   if (type === 'checkbox') return h('label', { class: 'check' }, h('input', { type, name: col, checked: !!val }), label);
   if (type === 'select') return h('label', {}, label, h('select', { name: col }, extra.options.map(([v, t]) => h('option', { value: v, selected: val === v }, t))));
-  return h('label', {}, label, h('input', { type, name: col, value: type === 'time' ? hhmm(val) : val ?? '', required: true, min: extra.min, max: extra.max, step: type === 'time' ? 300 : undefined }));
+  // B11: quiet times optional (empty = off / same as start=end); other numbers stay required.
+  const optional = !!extra.optional;
+  const attrs = { type, name: col, value: type === 'time' ? (val != null && val !== '' ? hhmm(val) : '') : (val ?? ''),
+    min: extra.min, max: extra.max, step: type === 'time' ? 300 : undefined };
+  if (!optional) attrs.required = true;
+  const hint = extra.hint ? h('small', { class: 'field-hint muted' }, extra.hint) : null;
+  const err = h('span', { class: 'field-error form-error hidden', 'data-for': col, role: 'alert' });
+  return h('label', {}, label, h('input', attrs), hint, err);
 }
 
 function section(id, title, fieldDefs, policies, { open = true } = {}) {
@@ -89,7 +95,7 @@ export async function renderSettings(root, ctx) {
     section('sec-booking', 'הזמנה ויומן', BOOKING_FIELDS, p),
     section('sec-reminders', 'תזכורות ושעות שקט', REMINDER_FIELDS, p),
     section('sec-waitlist', 'רשימת המתנה', WAITLIST_FIELDS, p),
-    section('sec-holiday-defaults', 'חגים (ברירות מחדל)', HOLIDAY_DEFAULT_FIELDS, p),
+    section('sec-holiday-defaults', 'חגים — ברירות מחדל (רשימה בלשונית ימים מיוחדים)', HOLIDAY_DEFAULT_FIELDS, p),
     b.is_demo ? section('sec-demo', 'מגבלות הדגמה', DEMO_FIELDS, p) : null,
   ].filter(Boolean);
 
@@ -103,13 +109,30 @@ export async function renderSettings(root, ctx) {
     sticky);
   if (ctx.role && ctx.role !== 'owner') for (const el of polForm.elements) el.disabled = true;
   polForm.addEventListener('submit', async (e) => { e.preventDefault();
+    for (const el of polForm.querySelectorAll('.field-error')) { el.textContent = ''; el.classList.add('hidden'); }
     const patch = {};
-    for (const [c, , t] of allFields) { const el = polForm.elements[c]; if (!el) continue; patch[c] = t === 'checkbox' ? el.checked : t === 'number' ? Number(el.value) : el.value; }
+    for (const [c, , t, extra = {}] of allFields) {
+      const el = polForm.elements[c]; if (!el) continue;
+      if (t === 'checkbox') patch[c] = el.checked;
+      else if (t === 'number') {
+        if (el.value === '' || Number.isNaN(Number(el.value))) {
+          const fe = polForm.querySelector(`.field-error[data-for="${c}"]`);
+          if (fe) { fe.textContent = 'שדה חובה — הזינו מספר.'; fe.classList.remove('hidden'); }
+          toast('מלאו את כל השדות החובה', true); return;
+        }
+        patch[c] = Number(el.value);
+      } else if (t === 'time' && extra.optional) {
+        patch[c] = el.value || '00:00';
+      } else patch[c] = el.value;
+    }
+    // Quiet hours off when start == end (incl. both empty → 00:00).
+    if ('quiet_start' in patch && 'quiet_end' in patch && patch.quiet_start && patch.quiet_end
+        && patch.quiet_start === patch.quiet_end) { /* intentionally off */ }
     for (const c of ['reminder_first_min', 'reminder_second_min']) if (c in patch && patch[c] > 0 && patch[c] < 10) { toast('תזכורת: 0 (כבוי) או לפחות 10 דקות', true); return; }
     try { const rows = await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id'));
       if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
 
-  // Order (K4): booking link → business details → policy sections → holiday calendar list
-  root.replaceChildren(renderBookingLink(ctx), bizForm, polForm, renderHolidays(ctx));
+  // Order (K4): booking link → business details → policy sections. Holiday calendar list lives on Days (B8).
+  root.replaceChildren(renderBookingLink(ctx), bizForm, polForm);
 }
