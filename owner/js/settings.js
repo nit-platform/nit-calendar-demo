@@ -1,4 +1,5 @@
 // Business details + per-business policies (all values live in the businesses / policies tables).
+// K4: policy fields split into <details> sections; demo_* only when businesses.is_demo (server-enforced too).
 import { sb, q, heError, hhmm } from './sb.js';
 import { h, toast, DEFAULT_PROVIDER_LABEL, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
@@ -6,7 +7,7 @@ import { renderBookingLink } from './bookinglink.js';
 import { renderHolidays } from './holidays.js';
 
 // [column, label, type, extra]
-const POLICY_FIELDS = [
+const BOOKING_FIELDS = [
   ['wait_duration_mode', 'תכנון זמני המתנה עם טווח', 'select', { options: [['max', 'לפי המקסימום (בטוח)'], ['min', 'לפי המינימום (צפוף)']] }],
   ['slot_step_min', 'קפיצות בין שעות (דקות)', 'number', { min: 1 }],
   ['min_notice_min', 'הזמנה לפחות X דקות מראש', 'number', { min: 0 }],
@@ -14,12 +15,9 @@ const POLICY_FIELDS = [
   ['cancel_min_hours', 'ביטול עד X שעות לפני', 'number', { min: 0 }],
   ['hold_minutes', 'שמירת שעה בזמן הזמנה (דקות)', 'number', { min: 1 }],
   ['no_show_limit', 'חסימה אחרי X אי-הגעות', 'number', { min: 0 }],
-  ['auto_holidays', 'חגים לפי לוח השנה: סגור בחג (ברירת מחדל)', 'checkbox'],
-  ['eve_shorten', 'ערב חג: יום מקוצר (ברירת מחדל)', 'checkbox'],
-  ['eve_close_time', 'ערב חג: סגירה בשעה', 'time'],
-  ['demo_max_bookings_per_phone_day', 'הדגמה: מקס׳ תורים לטלפון ביום', 'number', { min: 0 }],
-  ['demo_max_bookings_per_hour', 'הדגמה: מקס׳ תורים בשעה (כל העסק)', 'number', { min: 0 }],
-  // stage 5: reminders (in-app), quiet hours, waitlist. Owner only (DB-enforced).
+  ['require_owner_confirm_unverified', 'אישור ידני לתורים ממספר שלא אומת', 'checkbox'],
+];
+const REMINDER_FIELDS = [
   ['reminder_confirm', 'הודעת אישור מיד אחרי קביעת תור', 'checkbox'],
   ['reminder_first_min', 'תזכורת ראשונה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
   ['reminder_second_min', 'תזכורת שנייה: X דקות לפני (0 = כבוי)', 'number', { min: 0, max: 10080 }],
@@ -27,12 +25,21 @@ const POLICY_FIELDS = [
   ['quiet_end', 'שעות שקט: עד', 'time'],
   ['quiet_shabbat', 'לא לשלוח בשבת (מיום ו׳ 16:00)', 'checkbox'],
   ['quiet_holidays', 'לא לשלוח בחגים', 'checkbox'],
+];
+const WAITLIST_FIELDS = [
   ['waitlist_enabled', 'רשימת המתנה פעילה', 'checkbox'],
   ['waitlist_mode', 'הצעת תור שהתפנה', 'select', { options: [['fifo', 'לפי סדר ההרשמה (אחד בכל פעם)'], ['broadcast', 'לכולם, הראשון שמאשר']] }],
   ['waitlist_timeout_min', 'זמן לאישור הצעה (דקות)', 'number', { min: 5, max: 1440 }],
   ['last_minute_rule', 'תור של הרגע האחרון', 'select', { options: [['broadcast', 'לכולם, הראשון שמאשר'], ['fifo', 'לפי הסדר']] }],
-  // 000018: owner confirm for unverified phones (default off)
-  ['require_owner_confirm_unverified', 'אישור ידני לתורים ממספר שלא אומת', 'checkbox'],
+];
+const HOLIDAY_DEFAULT_FIELDS = [
+  ['auto_holidays', 'חגים לפי לוח השנה: סגור בחג (ברירת מחדל)', 'checkbox'],
+  ['eve_shorten', 'ערב חג: יום מקוצר (ברירת מחדל)', 'checkbox'],
+  ['eve_close_time', 'ערב חג: סגירה בשעה', 'time'],
+];
+const DEMO_FIELDS = [
+  ['demo_max_bookings_per_phone_day', 'הדגמה: מקס׳ תורים לטלפון ביום', 'number', { min: 0 }],
+  ['demo_max_bookings_per_hour', 'הדגמה: מקס׳ תורים בשעה (כל העסק)', 'number', { min: 0 }],
 ];
 const NON_OWNER_NOTE = 'רק בעל/ת העסק יכול/ה לשנות את ההגדרות.';
 
@@ -42,9 +49,19 @@ function input([col, label, type, extra = {}], val) {
   return h('label', {}, label, h('input', { type, name: col, value: type === 'time' ? hhmm(val) : val ?? '', required: true, min: extra.min, max: extra.max, step: type === 'time' ? 300 : undefined }));
 }
 
+function section(id, title, fieldDefs, policies, { open = true } = {}) {
+  const fields = fieldDefs.filter(([c]) => c in policies);
+  if (!fields.length) return null;
+  return h('details', { class: 'settings-sec', id, open: open ? '' : undefined },
+    h('summary', {}, title),
+    h('div', { class: 'sec-body list' }, fields.map((f) => input(f, policies[f[0]]))));
+}
+
 export async function renderSettings(root, ctx) {
   const p = ctx.policies, b = ctx.business;
-  const fields = POLICY_FIELDS.filter(([c]) => c in p);   // only columns that exist in this database
+  const allFields = [...BOOKING_FIELDS, ...REMINDER_FIELDS, ...WAITLIST_FIELDS, ...HOLIDAY_DEFAULT_FIELDS,
+    ...(b.is_demo ? DEMO_FIELDS : [])].filter(([c]) => c in p);
+
   const bizForm = h('form', { class: 'card', id: 'biz-form' }, h('h2', {}, 'פרטי העסק'),
     h('div', { class: 'row' }, h('label', {}, 'שם העסק', h('input', { name: 'name', value: b.name, required: true })),
       h('label', {}, 'וואטסאפ', h('input', { name: 'phone_whatsapp', value: b.phone_whatsapp || '', dir: 'ltr', inputmode: 'tel' })),
@@ -68,18 +85,31 @@ export async function renderSettings(root, ctx) {
       if (!row) throw new Error('permission denied'); Object.assign(ctx.business, row); document.querySelector('#biz-name').textContent = row.name; bizForm.provider_label.value = row.provider_label || ''; toast('נשמר'); }
     catch (err) { toast(heError(err), true); if (choose) choose.checked = b.customers_choose_provider !== false; } });
 
-  const polForm = h('form', { class: 'card', id: 'policy-form' }, h('h2', {}, 'כללי הזמנה ויומן'),
-    h('div', { class: 'list' }, fields.map((f) => input(f, p[f[0]]))),
+  const sections = [
+    section('sec-booking', 'הזמנה ויומן', BOOKING_FIELDS, p),
+    section('sec-reminders', 'תזכורות ושעות שקט', REMINDER_FIELDS, p),
+    section('sec-waitlist', 'רשימת המתנה', WAITLIST_FIELDS, p),
+    section('sec-holiday-defaults', 'חגים (ברירות מחדל)', HOLIDAY_DEFAULT_FIELDS, p),
+    b.is_demo ? section('sec-demo', 'מגבלות הדגמה', DEMO_FIELDS, p) : null,
+  ].filter(Boolean);
+
+  const sticky = h('div', { class: 'policy-sticky actions' },
+    h('button', { class: 'btn primary', type: 'submit', disabled: !!ctx.role && ctx.role !== 'owner' }, 'שמירה'));
+  const polForm = h('form', { class: 'card policy-card', id: 'policy-form' },
+    h('h2', {}, 'כללי הזמנה ויומן'),
+    ...sections,
     h('p', { class: 'muted' }, 'ערוץ הודעות: באפליקציה בלבד (SMS / וואטסאפ / אימייל לא פעילים).'),
     ctx.role && ctx.role !== 'owner' ? h('p', { class: 'muted', id: 'policy-owner-only' }, NON_OWNER_NOTE) : null,
-    h('div', { class: 'actions' }, h('button', { class: 'btn primary', disabled: !!ctx.role && ctx.role !== 'owner' }, 'שמירה')));
+    sticky);
   if (ctx.role && ctx.role !== 'owner') for (const el of polForm.elements) el.disabled = true;
   polForm.addEventListener('submit', async (e) => { e.preventDefault();
     const patch = {};
-    for (const [c, , t] of fields) { const el = polForm.elements[c]; patch[c] = t === 'checkbox' ? el.checked : t === 'number' ? Number(el.value) : el.value; }
+    for (const [c, , t] of allFields) { const el = polForm.elements[c]; if (!el) continue; patch[c] = t === 'checkbox' ? el.checked : t === 'number' ? Number(el.value) : el.value; }
     for (const c of ['reminder_first_min', 'reminder_second_min']) if (c in patch && patch[c] > 0 && patch[c] < 10) { toast('תזכורת: 0 (כבוי) או לפחות 10 דקות', true); return; }
     try { const rows = await q(sb.from('policies').update(patch).eq('business_id', b.id).select('business_id'));
       if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
+
+  // Order (K4): booking link → business details → policy sections → holiday calendar list
   root.replaceChildren(renderBookingLink(ctx), bizForm, polForm, renderHolidays(ctx));
 }
