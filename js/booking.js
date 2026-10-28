@@ -129,7 +129,7 @@ function renderSlots(rows) {
         'aria-label': `${fmtTime(r.slot_start)} – תפוס` }, fmtTime(r.slot_start));
   const parts = [];
   if (fills.length) parts.push(h('div', { class: 'slot-group fill-group' },
-    h('h3', {}, '⭐ מומלץ – נכנס בזמן המתנה ביומן'), h('div', { class: 'slot-grid' }, fills.map(btn))));
+    h('h3', {}, '⭐ מומלץ'), h('div', { class: 'slot-grid' }, fills.map(btn))));
   const by = { 'בוקר': [], 'צהריים': [], 'ערב': [] };
   for (const r of rest) { const hr = Number(fmtTime(r.slot_start).slice(0, 2)); by[hr < 12 ? 'בוקר' : hr < 16 ? 'צהריים' : 'ערב'].push(r); }
   for (const [label, list] of Object.entries(by)) if (list.length)

@@ -64,7 +64,20 @@ async function refreshAuthBar(slug) {
     user.textContent = '';
     if (status) { status.textContent = 'לא מחובר'; status.classList.remove('hidden'); }
     if (note) note.classList.add('hidden');
-    if (myStep) myStep.classList.add('hidden');
+    // B6: keep «התורים שלי» visible signed-out with a CTA into existing Google sign-in
+    if (myStep && slug) {
+      myStep.classList.remove('hidden');
+      const box = $('#my-appts');
+      box.replaceChildren(h('button', {
+        type: 'button', class: 'btn google', id: 'my-appts-signin',
+        onclick: async () => {
+          try { await auth.signInWithGoogle(); }
+          catch (e) { toast(friendlyError(e), true); }
+        },
+      }, 'התחברו כדי לראות את התורים שלכם'));
+    } else if (myStep) {
+      myStep.classList.add('hidden');
+    }
   }
 }
 
