@@ -16,6 +16,13 @@ import * as auth from './auth.js';
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
 
+function customerDisplayName(session) {
+  const u = session?.user;
+  if (!u) return '';
+  const md = u.user_metadata || {};
+  return (md.full_name || md.name || u.email || 'מחוברים').trim();
+}
+
 let _authSlug = null;
 async function refreshAuthBar(slug) {
   _authSlug = slug;
@@ -24,14 +31,21 @@ async function refreshAuthBar(slug) {
   bar.classList.remove('hidden');
   const session = await auth.getCustomerSession();
   const btnIn = $('#auth-google'), btnOut = $('#auth-signout'), user = $('#auth-user');
+  const status = $('#auth-status');
   const note = $('#book-auth-note');
   const myStep = $('#my-appts-step');
+  const signinStep = $('#signin-step');
+  const signinMsg = $('#signin-msg');
+  const bookGoogle = $('#book-google');
   if (session) {
+    const name = customerDisplayName(session);
     btnIn.classList.add('hidden');
     btnOut.classList.remove('hidden');
     user.classList.remove('hidden');
-    user.textContent = session.user?.email || 'מחוברים';
+    user.textContent = name;
+    if (status) { status.textContent = 'מחוברים'; status.classList.remove('hidden'); }
     if (note) note.classList.remove('hidden');
+    if (signinStep) signinStep.classList.add('hidden');
     if (myStep && slug) {
       myStep.classList.remove('hidden');
       try {
@@ -51,19 +65,32 @@ async function refreshAuthBar(slug) {
     btnOut.classList.add('hidden');
     user.classList.add('hidden');
     user.textContent = '';
+    if (status) { status.textContent = 'לא מחוברים'; status.classList.remove('hidden'); }
     if (note) note.classList.add('hidden');
     if (myStep) myStep.classList.add('hidden');
+    if (signinStep) signinStep.classList.remove('hidden');
+    if (signinMsg) signinMsg.textContent = 'לא מחוברים';
+    if (bookGoogle) bookGoogle.classList.remove('hidden');
   }
 }
 
 function wireAuthBar() {
   const bar = $('#auth-bar');
-  if (!auth.googleSignInEnabled() || !bar || bar.dataset.wired) return;
+  const signinStep = $('#signin-step');
+  if (!auth.googleSignInEnabled()) {
+    if (bar) bar.classList.add('hidden');
+    if (signinStep) signinStep.classList.add('hidden');
+    return;
+  }
+  if (!bar || bar.dataset.wired) return;
   bar.dataset.wired = '1';
-  $('#auth-google').addEventListener('click', async () => {
+  const startGoogle = async () => {
     try { await auth.signInWithGoogle(); }
     catch (e) { toast(friendlyError(e), true); }
-  });
+  };
+  $('#auth-google').addEventListener('click', startGoogle);
+  const bookGoogle = $('#book-google');
+  if (bookGoogle) bookGoogle.addEventListener('click', startGoogle);
   $('#auth-signout').addEventListener('click', async () => {
     await auth.signOutCustomer();
     await refreshAuthBar(_authSlug);
