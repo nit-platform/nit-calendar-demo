@@ -86,3 +86,12 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .onboard-card{display:grid;gap:10px}
 .onboard-summary{margin:0;padding-inline-start:1.2em;line-height:1.7}
 .muted.ok{color:#2e7d32;font-weight:600}
+/* K4 settings sections + sticky save */
+.settings-sec{border:1px solid #ececef;border-radius:12px;margin:0 0 10px;background:#fafafa}
+.settings-sec>summary{cursor:pointer;font-weight:700;padding:12px 14px;list-style:none;min-height:44px;display:flex;align-items:center;gap:8px}
+.settings-sec>summary::-webkit-details-marker{display:none}
+.settings-sec>summary::before{content:'▸';opacity:.55;font-size:.85em}
+.settings-sec[open]>summary::before{content:'▾'}
+.settings-sec .sec-body{padding:0 14px 14px;display:grid;gap:6px}
+.policy-card{padding-bottom:4px}
+.policy-sticky{position:sticky;bottom:0;z-index:5;background:var(--card,#fff);border-top:1px solid #ececef;margin:8px -16px 0;padding:10px 16px;box-shadow:0 -4px 12px rgba(0,0,0,.04)}
