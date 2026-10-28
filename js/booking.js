@@ -1,13 +1,30 @@
-// Booking flow for ONE provider (legacy staff slug, or a business slug + chosen provider): service -> date -> free/busy grid -> dialog (name + phone) -> demo_book.
+// Booking flow for ONE provider (legacy staff slug, or a business slug + chosen provider): service -> date -> free/busy grid -> dialog (name + phone) -> book / hold+Google.
 // Privacy: the page only learns whether a time is free; busy times carry no name, service or other detail.
-import { api, friendlyError } from './api.js';
+import { api, friendlyError, HOLD_VIA_FUNCTION } from './api.js';
 import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 import { addToken, renderInbox } from './waitlist.js';
 import { saveManageLink, bookingManageLink } from './manage.js';
+import * as auth from './auth.js';
+import { setWelcomeSkip } from './welcome.js';
+import { initBookCaptcha, bookCaptchaToken, resetBookCaptcha } from './book-captcha.js';
 
 const state = { scope: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
+const HOLD_KEY = 'nit-pending-hold';
+
+function savePendingHold(payload) {
+  try { sessionStorage.setItem(HOLD_KEY, JSON.stringify(payload)); } catch { /* ignore */ }
+}
+function loadPendingHold() {
+  try {
+    const raw = sessionStorage.getItem(HOLD_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearPendingHold() {
+  try { sessionStorage.removeItem(HOLD_KEY); } catch { /* ignore */ }
+}
 
 export async function initBooking({ scope, barber }) {
   state.scope = scope; state.barber = barber;
@@ -20,6 +37,8 @@ export async function initBooking({ scope, barber }) {
   renderDateStrip();
   $('#book-cancel').addEventListener('click', () => $('#book-dialog').close());
   $('#book-form').addEventListener('submit', submitBooking);
+  // After Google OAuth return: finish held booking if any.
+  resumeHeldBooking().catch(() => {});
 }
 
 /** Current choice, for the waitlist dialog. */
@@ -50,7 +69,6 @@ function describeSteps(steps) {
   return steps.map((s) => `${s.name} ${s.max_duration_min ? `${s.duration_min}–${s.max_duration_min}` : s.duration_min}′${s.is_blocking ? '' : ' (המתנה)'}`).join(' → ');
 }
 
-// Provider auto-assigned (no choice): the price may differ per provider -> show "from".
 const priceText = (s) => (s.price_varies ? `החל מ-${shekel(s.price)}` : shekel(s.price));
 
 function renderServices() {
@@ -78,7 +96,7 @@ function renderDateStrip() {
   strip.replaceChildren(...days.map((d) =>
     h('button', { class: 'day-chip', type: 'button', 'aria-pressed': String(d === state.date), onclick: () => setDate(d) },
       h('small', {}, fmtShortWeekday(d)), dayOfMonth(d))));
-  const sel = strip.querySelector('[aria-pressed=true]');   // scroll only the strip, never the page
+  const sel = strip.querySelector('[aria-pressed=true]');
   if (sel) strip.scrollLeft = sel.offsetLeft - strip.clientWidth / 2 + sel.offsetWidth / 2;
 }
 
@@ -90,7 +108,7 @@ export async function loadSlots() {
   box.replaceChildren(muted('טוען שעות…'));
   try {
     const rows = await api.slotGrid(state.scope, state.serviceId, state.date);
-    if (my !== slotReq) return;               // a newer request superseded this one
+    if (my !== slotReq) return;
     renderSlots(rows);
   } catch (e) { if (my === slotReq) box.replaceChildren(muted(friendlyError(e))); }
 }
@@ -119,7 +137,7 @@ function renderSlots(rows) {
   box.replaceChildren(...parts);
 }
 
-function openDialog(slot) {
+async function openDialog(slot) {
   const svc = state.services.find((s) => s.service_id === state.serviceId);
   state.pending = slot;
   $('#book-summary').replaceChildren(
@@ -130,8 +148,45 @@ function openDialog(slot) {
     h('div', {}, `מחיר: ${priceText(svc)}`),
     slot.is_dead_time_fill ? h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה ביומן')) : null);
   $('#book-error').textContent = '';
+  const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
+  const note = $('#book-auth-note'), holdNote = $('#book-hold-note'), cap = $('#book-captcha');
+  const needsHold = state.scope.kind === 'biz' && auth.googleSignInEnabled() && !session;
+  if (note) note.classList.toggle('hidden', !session);
+  if (holdNote) holdNote.classList.toggle('hidden', !needsHold);
+  if (cap) {
+    if (needsHold && HOLD_VIA_FUNCTION) {
+      await initBookCaptcha(cap);
+    } else {
+      cap.classList.add('hidden');
+    }
+  }
+  const submit = $('#book-submit');
+  if (submit) submit.textContent = needsHold ? 'שמירת שעה והתחברות' : 'קבע תור';
   $('#book-dialog').showModal();
   $('#book-form').elements.name.focus();
+}
+
+function finishBookSuccess(res) {
+  $('#book-dialog').close();
+  const pending = res.status === 'pending';
+  toast(pending
+    ? `הבקשה נשלחה לאישור העסק · ${fmtTime(res.starts_at)}`
+    : `התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
+  if (res.manage_token && state.scope.kind === 'biz') {
+    saveManageLink(state.scope.slug, res.manage_token);
+    const href = bookingManageLink(state.scope.slug, res.manage_token);
+    const note = h('div', { class: 'card manage-note' },
+      h('p', {}, pending
+        ? 'התור ממתין לאישור העסק. השעה שמורה. שמרו את הקישור לניהול / ביטול:'
+        : 'שמרו את הקישור לניהול התור (צפייה / ביטול / שינוי מועד):'),
+      h('p', {}, h('a', { href, id: 'manage-link' }, 'ניהול התור שלי')));
+    const book = $('#view-book');
+    const oldN = book.querySelector('.manage-note');
+    if (oldN) oldN.remove();
+    book.prepend(note);
+  }
+  if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
+  loadSlots();
 }
 
 async function submitBooking(ev) {
@@ -141,31 +196,77 @@ async function submitBooking(ev) {
   if (name.length < 2) { $('#book-error').textContent = 'נא להזין שם'; return; }
   btn.disabled = true; $('#book-error').textContent = '';
   try {
+    const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
+    const needsHold = state.scope.kind === 'biz' && auth.googleSignInEnabled() && !session;
+
+    if (needsHold) {
+      const captcha = bookCaptchaToken();
+      if (HOLD_VIA_FUNCTION && !captcha) {
+        $('#book-error').textContent = 'נא להשלים את בדיקת האבטחה.';
+        return;
+      }
+      const hold = await api.holdSlot({
+        scope: state.scope, serviceId: state.serviceId, startsAt: state.pending.slot_start, captcha,
+      });
+      resetBookCaptcha();
+      savePendingHold({
+        slug: state.scope.slug,
+        staffId: hold.staff_id ?? state.scope.staffId,
+        serviceId: hold.service_id ?? state.serviceId,
+        startsAt: hold.starts_at ?? state.pending.slot_start,
+        holdToken: hold.hold_token,
+        expiresAt: hold.expires_at,
+        name, phone,
+      });
+      // Avoid welcome loop after OAuth return.
+      setWelcomeSkip(state.scope.slug);
+      $('#book-dialog').close();
+      toast('השעה נשמרה. מתחברים עם Google…');
+      await auth.signInWithGoogle();
+      return;
+    }
+
     const res = await api.book({ scope: state.scope, serviceId: state.serviceId,
                                  startsAt: state.pending.slot_start, name, phone });
-    $('#book-dialog').close();
-    const pending = res.status === 'pending';
-    toast(pending
-      ? `הבקשה נשלחה לאישור העסק · ${fmtTime(res.starts_at)}`
-      : `התור נקבע ל-${fmtTime(res.starts_at)} ✔`);
-    // manage_token returned once; show Hebrew link. access_token only when phone already verified.
-    if (res.manage_token && state.scope.kind === 'biz') {
-      saveManageLink(state.scope.slug, res.manage_token);
-      const href = bookingManageLink(state.scope.slug, res.manage_token);
-      const note = h('div', { class: 'card manage-note' },
-        h('p', {}, pending
-          ? 'התור ממתין לאישור העסק. השעה שמורה. שמרו את הקישור לניהול / ביטול:'
-          : 'שמרו את הקישור לניהול התור (צפייה / ביטול / שינוי מועד):'),
-        h('p', {}, h('a', { href, id: 'manage-link' }, 'ניהול התור שלי')));
-      const book = $('#view-book');
-      const oldN = book.querySelector('.manage-note');
-      if (oldN) oldN.remove();
-      book.prepend(note);
-    }
-    if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
-    loadSlots();
+    finishBookSuccess(res);
   } catch (e) {
     $('#book-error').textContent = friendlyError(e);
+    resetBookCaptcha();
     if ((e.message || '').includes('slot not available')) loadSlots();
   } finally { btn.disabled = false; }
+}
+
+/** After Google redirect: confirm held booking once. */
+export async function resumeHeldBooking() {
+  const pending = loadPendingHold();
+  if (!pending?.holdToken) return;
+  if (!auth.googleSignInEnabled()) return;
+  const session = await auth.getCustomerSession();
+  if (!session) return; // still unsigned — leave hold for later / expiry
+  clearPendingHold();
+  try {
+    const res = await api.confirmHold({
+      slug: pending.slug, holdToken: pending.holdToken, name: pending.name, phone: pending.phone,
+    });
+    // Ensure scope is biz for manage link UI
+    if (!state.scope) state.scope = { kind: 'biz', slug: pending.slug, staffId: pending.staffId };
+    finishBookSuccess(res);
+  } catch (e) {
+    const msg = e.message || '';
+    if (msg.includes('hold expired') || msg.includes('slot not available')) {
+      try {
+        const alts = await api.holdAlternatives({
+          scope: { kind: 'biz', slug: pending.slug, staffId: pending.staffId },
+          serviceId: pending.serviceId, around: pending.startsAt,
+        });
+        const n = Array.isArray(alts) ? alts.length : (alts?.length || 0);
+        toast(n ? `השריון פג. יש ${n} שעות חלופיות קרובות — בחרו מחדש.` : friendlyError(e), true);
+      } catch {
+        toast(friendlyError(e), true);
+      }
+      loadSlots();
+    } else {
+      toast(friendlyError(e), true);
+    }
+  }
 }

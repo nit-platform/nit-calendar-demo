@@ -12,6 +12,7 @@ import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
 import { renderManage } from './manage.js';
 import { DEFAULT_BUSINESS_SLUG } from './config.js';
 import * as auth from './auth.js';
+import { maybeShowWelcome, hideWelcome } from './welcome.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
@@ -113,14 +114,14 @@ async function startBusiness(slug, biz, explicit) {
   const manage = qs.get('manage');
   if (offer !== null) {          // ?b=<slug>&offer=<token>: the offer page only (token never leaves the URL/server call)
     setTitle(biz.business_name, ''); document.title = `${biz.business_name} – הצעה מרשימת המתנה`;
-    show('offer');
+    show('offer'); hideWelcome();
     await renderOffer(slug, offer.toLowerCase(), $('#offer-box'));
     $('#offer-back').href = location.pathname + '?b=' + encodeURIComponent(slug);
     return;
   }
   if (manage !== null) {         // ?b=<slug>&manage=<token>: Hebrew manage page (view/cancel/reschedule)
     setTitle(biz.business_name, ''); document.title = `${biz.business_name} – ניהול תור`;
-    show('manage');
+    show('manage'); hideWelcome();
     await renderManage(slug, manage, $('#manage-box'));
     $('#manage-back').href = location.pathname + '?b=' + encodeURIComponent(slug);
     return;
@@ -132,6 +133,7 @@ async function startBusiness(slug, biz, explicit) {
   startInboxPolling(slug);
   setTitle(biz.business_name, '');
   document.title = `${biz.business_name} – קביעת תור`;
+  maybeShowWelcome(slug, biz.business_name).catch(() => {});
   const staff = Array.isArray(biz.staff) ? biz.staff : [];
   const asBarber = (s) => ({ display_name: s.display_name, business_name: biz.business_name, provider_label: biz.provider_label });
   const step = $('#staff-step'), list = $('#staff-list');

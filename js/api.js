@@ -7,6 +7,7 @@ import * as auth from './auth.js';
 const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = cfg;
 // Missing in an older cached config.js -> false (legacy path).
 export const WAITLIST_VIA_FUNCTION = cfg.WAITLIST_VIA_FUNCTION === true;
+export const HOLD_VIA_FUNCTION = cfg.HOLD_VIA_FUNCTION === true;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -51,6 +52,14 @@ const ERRORS = {
   'too many manage requests from this device today': 'הגעתם למספר הניסיונות המרבי להיום מהמכשיר הזה.',
   'too many manage requests, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
   'too many manage requests, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
+  'sign-in required': 'יש להתחבר עם Google כדי לקבוע תור.',
+  'hold expired': 'השריון פג. בחרו שעה מחדש.',
+  'hold not found': 'השריון לא נמצא. בחרו שעה מחדש.',
+  'hold already used': 'השריון כבר נוצל.',
+  'owner cannot book as customer': 'בעלי העסק לא יכולים לקבוע תור כלקוחות דרך הקישור הזה.',
+  'too many holds from this device, try later': 'יותר מדי שריונים מהמכשיר הזה. נסו שוב בעוד כמה דקות.',
+  'too many holds, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
+  'too many holds, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
 };
 export function friendlyError(err) {
   const m = (err && (err.message || String(err))) || '';
@@ -107,6 +116,21 @@ export const api = {
       : rpc('demo_book', { p_slug: sc.slug, p_service_id: serviceId, p_starts_at: startsAt,
                            p_customer_name: name, p_phone: phone });
   },
+  // Decision 18: hold slot while the guest signs in with Google at confirm.
+  holdSlot: ({ scope: sc, serviceId, startsAt, captcha }) => {
+    const params = { p_slug: sc.slug, p_staff_id: sc.staffId ?? null, p_service_id: serviceId, p_starts_at: startsAt };
+    return HOLD_VIA_FUNCTION
+      ? viaFunction('booking-hold', { ...params, turnstile_token: captcha || '' })
+      : rpc('public_hold_slot', params);
+  },
+  releaseHold: (token) => rpc('public_release_hold', { p_token: token }),
+  holdAlternatives: ({ scope: sc, serviceId, around }) =>
+    rpc('public_hold_alternatives', { p_slug: sc.slug, p_staff_id: sc.staffId ?? null,
+                                      p_service_id: serviceId, p_around: around, p_limit: 8 }),
+  confirmHold: ({ slug, holdToken, name, phone }) =>
+    auth.customerRpc('customer_confirm_hold', {
+      p_slug: slug, p_hold_token: holdToken, p_customer_name: name, p_phone: phone,
+    }),
   myAppointments: async (slug) => {
     if (!auth.googleSignInEnabled()) return [];
     const session = await auth.getCustomerSession();
