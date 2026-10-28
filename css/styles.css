@@ -71,9 +71,20 @@ html,body{overflow-x:hidden}
 .manage-note a{font-weight:700}
 .st-pending{opacity:.85;outline:2px dashed #f0a000}
 
-/* customer Google auth */
-.auth-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+/* customer Google auth — high contrast on dark header + in booking flow */
+.auth-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin:8px 0 12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.22)}
 .auth-bar.hidden{display:none}
-.auth-user{font-size:.85rem;opacity:.9}
+.auth-status{font-size:.85rem;font-weight:700;color:#fff;background:rgba(0,0,0,.28);padding:5px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35)}
+.auth-user{font-size:.9rem;font-weight:700;color:#fff}
+.auth-out{background:rgba(255,255,255,.2)!important;color:#fff!important;border:1.5px solid rgba(255,255,255,.7)!important;font-weight:700}
+.btn.google{background:#fff;color:#3c4043;border:1px solid #dadce0;box-shadow:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);font-weight:600;display:inline-flex;align-items:center;gap:10px;padding:10px 16px;line-height:1.2}
+.btn.google:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(60,64,67,.35)}
+.btn.google:focus-visible{outline:2px solid #4285f4;outline-offset:2px}
+.btn.google .google-g{flex:0 0 auto;display:block}
+.top .btn.google{background:#fff;color:#3c4043;border-color:#fff}
+.signin-card{border:2px solid var(--brand);background:linear-gradient(180deg,#eef4fb,#fff)}
+.signin-card .btn.google{border-color:#dadce0}
+.signin-msg{margin:0 0 10px;font-weight:700;color:var(--brand)}
+.signin-actions{justify-content:flex-start}
 .muted.small{font-size:.85rem}
 #book-auth-note:not(.hidden){margin:0}
