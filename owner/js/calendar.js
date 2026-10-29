@@ -214,12 +214,19 @@ async function renderWeek(box, ctx) {
 
 export async function renderCalendar(root, ctx) {
   const staff = ctx.staff.filter((s) => s.is_active);
-  if (!staff.length) { root.replaceChildren(h('div', { class: 'card' }, muted(`אין אף ${providerLabel(ctx.business)} פעיל.`))); return; }
+  const checklist = setupChecklistCard(ctx);
+  // B5: even with no active staff, still show the first-run checklist (missing צוות).
+  if (!staff.length) {
+    root.replaceChildren(
+      ...(checklist ? [checklist] : []),
+      h('div', { class: 'card' }, muted(`אין אף ${providerLabel(ctx.business)} פעיל.`)),
+    );
+    return;
+  }
   if (!staff.some((s) => s.id === st.staffId)) st.staffId = staff[0].id;
   const body = h('div', {});
   const rerender = () => renderCalendar(root, ctx);
   const step = st.mode === 'week' ? 7 : 1;
-  const checklist = setupChecklistCard(ctx);
   const toolbar = h('div', { class: 'card toolbar' },
       h('select', { id: 'cal-staff', 'aria-label': providerLabel(ctx.business), onchange: (e) => { st.staffId = e.target.value; rerender(); } },
         staff.map((s) => h('option', { value: s.id, selected: s.id === st.staffId }, s.display_name))),

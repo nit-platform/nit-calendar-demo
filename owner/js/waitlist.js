@@ -29,7 +29,7 @@ export async function renderWaitlist(root, ctx) {
     .map((c) => [c.id, `${c.full_name || ''} ${c.phone_e164 || ''}`.trim()]));
   const svc = (id) => ctx.services.find((s) => s.id === id)?.name || '';
   const staff = (id) => id ? ctx.staff.find((s) => s.id === id)?.display_name || '' : 'כל אחד';
-  const act = async (fn, ok) => { try { await fn(); toast(ok); rerender(); } catch (e) { toast(heError(e), true); } };
+  const act = async (fn, ok) => { try { await fn(); await rerender(); toast(ok); } catch (e) { toast(heError(e), true); } };
   const live = (o) => !o.response && new Date(o.expires_at) > new Date();
 
   const copyLink = async (o) => {

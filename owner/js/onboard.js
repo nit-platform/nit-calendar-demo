@@ -122,19 +122,26 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
   }
 
   function progressBar() {
+    // C1: continuous fill + connector line through step dots; ✓ on completed.
     const left = ['', 'עוד ~3 דק׳', 'עוד ~2 דק׳', 'עוד ~1 דק׳', 'מוכן!'][state.step] || '';
     const names = ['', 'סוג', 'פרטים', 'שירות', 'שיתוף'];
-    const pct = Math.round((state.step / TOTAL) * 100);
+    const linePct = state.step <= 1 ? 0 : Math.round(((state.step - 1) / (TOTAL - 1)) * 100);
+    const trackPct = Math.round((state.step / TOTAL) * 100);
     return h('div', { class: 'onboard-progress-wrap', 'aria-label': `שלב ${state.step} מתוך ${TOTAL}` },
       h('div', { class: 'onboard-progress-meta' },
         h('span', {}, `שלב ${state.step}/${TOTAL} · ${names[state.step] || ''}`),
         h('span', { class: 'muted' }, left)),
-      h('div', { class: 'onboard-progress-track', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
-        h('div', { class: 'onboard-progress-fill', style: `width:${pct}%` })),
+      h('div', { class: 'onboard-progress-track', role: 'progressbar', 'aria-valuenow': String(trackPct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+        h('div', { class: 'onboard-progress-fill', style: `width:${trackPct}%` })),
       h('div', { class: 'onboard-progress' },
+        h('span', {
+          class: 'onboard-progress-line', 'aria-hidden': 'true',
+          style: `width:calc((100% - 28px) * ${linePct} / 100)`,
+        }),
         ...[1, 2, 3, 4].map((i) => h('span', {
           class: i === state.step ? 'on' : (i < state.step ? 'done' : ''),
           title: names[i],
+          'aria-current': i === state.step ? 'step' : undefined,
         }, i < state.step ? '✓' : String(i)))));
   }
 
@@ -581,7 +588,9 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       type: 'button', class: 'btn', id: 'onboard-to-calendar',
     }, 'מעבר ליומן הניהול');
 
+    // C2: short «מוכן!» burst on the share/finish step
     const box = h('div', { id: 'onboard-finish', class: 'onboard-finish onboard-ready' },
+      h('div', { class: 'onboard-ready-burst', role: 'status' }, 'מוכן!'),
       h('h3', { class: 'sub onboard-ready-title', style: 'margin-top:0' }, '✓ העסק מוכן לקבל תורים'),
       h('p', { class: 'onboard-share-label' }, 'הקישור שלכם'),
       linkEl,
