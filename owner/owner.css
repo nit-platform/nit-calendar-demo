@@ -154,3 +154,29 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .staff-gap-badge{color:#a15c00;font-weight:700;font-size:.85rem}
 .staff-card.staff-incomplete{border-color:#f0c36d}
 .staff-add-hint{margin:0 0 10px;font-size:.9rem}
+
+/* K5/K1/K2 4-step onboard */
+.onboard-progress-wrap{display:grid;gap:6px}
+.onboard-progress-meta{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;font-weight:600}
+.onboard-progress-track{height:6px;border-radius:999px;background:#ececef;overflow:hidden}
+.onboard-progress-fill{height:100%;background:var(--brand);border-radius:999px;transition:width .25s ease}
+.onboard-types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.onboard-type{display:grid;gap:4px;text-align:start;padding:12px;border:2px solid #e4e4e8;border-radius:12px;background:#fff;cursor:pointer;font:inherit;min-height:72px}
+.onboard-type:hover{border-color:#c5c5ca}
+.onboard-type.selected{border-color:var(--brand);background:#f5f8ff;box-shadow:0 0 0 1px var(--brand)}
+.onboard-type strong{font-size:.95rem}
+.onboard-who{border:1px solid #ececef;border-radius:12px;padding:10px 12px;display:grid;gap:8px;margin:0}
+.onboard-who legend{font-weight:700;padding:0 4px}
+.onboard-radio{display:flex;gap:10px;align-items:flex-start;padding:8px;border-radius:10px;cursor:pointer}
+.onboard-radio:has(input:checked){background:#f5f8ff}
+.onboard-radio input{margin-top:3px}
+.onboard-radio b{display:block}
+.onboard-radio small{display:block;margin-top:2px}
+.onboard-advanced{display:grid;gap:8px;padding:10px;border:1px dashed #d0d0d6;border-radius:10px;background:#fafafa}
+.onboard-share-url{display:block;font-family:ui-monospace,monospace;font-size:.9rem;word-break:break-all;padding:12px;border-radius:10px;background:#f6f8fb;border:1px solid #e4ebf5;margin:6px 0 10px}
+.onboard-preview{margin:12px 0;padding:12px;border-radius:12px;border:1px solid #ececef;background:#fafafa}
+.onboard-preview-card{display:grid;gap:6px;padding:14px;border-radius:12px;background:#fff;border:1px solid #e4e4e8;max-width:280px}
+.onboard-slug-details{margin:8px 0;border:1px solid #ececef;border-radius:10px;padding:8px 12px;background:#fff}
+.onboard-slug-details summary{cursor:pointer;font-weight:600;min-height:36px;display:flex;align-items:center}
+.btn.outline{background:#fff;border:1.5px solid var(--brand);color:var(--brand)}
+.onboard .btn.link{color:var(--brand)}
