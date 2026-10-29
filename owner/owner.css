@@ -190,3 +190,14 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .onboard-preview-frame{display:block;width:100%;height:280px;border:0;background:#fff;transform:scale(1);transform-origin:top right}
 .onboard-slug-panel{margin:10px 0;padding:12px;border:1px solid #ececef;border-radius:12px;background:#fff;display:grid;gap:6px}
 .onboard-slug-title{margin:0;font-weight:700}
+
+/* B5 first-run checklist + B6 empty CTAs */
+.setup-check-card{border:1px solid #f0d48a;background:#fff8e6}
+.setup-check-card h2{margin:0 0 4px;font-size:1.05rem}
+.setup-check-list{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
+.setup-check-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px}
+.setup-check-ok{color:#3d7a3d;font-weight:600}
+.setup-check-todo{font-weight:600}
+.setup-check-cta{margin-inline-start:auto}
+.empty-cal-cta,.empty-tab-cta{border:1px dashed #c5c5ca;background:#fafafa}
+.empty-cal-cta p,.empty-tab-cta p{margin:0 0 6px}
