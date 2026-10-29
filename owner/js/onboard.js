@@ -1,4 +1,4 @@
-// K5/K1/K2 onboarding: 4 visible steps — type → details(+solo) → service → share.
+// K5/K1/K2/K3/K4 onboarding: type → details(+solo) → service → share+preview.
 // Templates are client-side defaults only (editable). Hours + solo staff applied in the background.
 import { sb, q, rpc, heError } from './sb.js';
 import { h, toast, providerLabel, DEFAULT_PROVIDER_LABEL } from '../../js/ui.js';
@@ -382,73 +382,163 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     return [form];
   }
 
-  // ---------- 4/4 share (K3/K4 as needed) ----------
+  // ---------- 4/4 share (K3 + K4 climax) ----------
   async function stepShare(card) {
     const b = state.business;
-    const currentSlug = (b.public_slug || '').toLowerCase();
-    const suggested = suggestSlug(b.name) || currentSlug || '';
-    const href = currentSlug ? bookingUrl(currentSlug) : (suggested ? bookingUrl(suggested) : '');
+    let liveSlug = (b.public_slug || '').toLowerCase();
+    const latinSuggested = suggestSlug(b.name);
+    const activeSlug = liveSlug || latinSuggested || '';
+    let href = activeSlug ? bookingUrl(activeSlug) : '';
+
+    const sameOriginPreview = (url) => {
+      try { return !!url && new URL(url).origin === location.origin; }
+      catch { return false; }
+    };
 
     const linkEl = h('a', {
       href: href || '#', target: '_blank', rel: 'noopener', dir: 'ltr',
       id: 'onboard-share-link', class: 'onboard-share-url',
+      'aria-label': 'קישור ההזמנה ללקוחות',
     }, href || 'הקישור יופיע אחרי שמירת מזהה');
 
-    const copyBtn = h('button', { type: 'button', class: 'btn primary', id: 'onboard-copy-link' }, 'העתקת קישור');
+    const copyBtn = h('button', {
+      type: 'button', class: 'btn primary', id: 'onboard-copy-link',
+    }, 'העתקת קישור');
+
+    const waBtn = h('a', {
+      class: 'btn outline' + (href ? '' : ' hidden'),
+      href: href
+        ? `https://wa.me/?text=${encodeURIComponent(`שלום! לקביעת תור אצל ${b.name}: ${href}`)}`
+        : '#',
+      target: '_blank', rel: 'noopener', id: 'onboard-wa',
+    }, 'וואטסאפ');
+
+    const openFull = h('a', {
+      class: 'btn link' + (href ? '' : ' hidden'),
+      href: href || '#', target: '_blank', rel: 'noopener', id: 'onboard-preview-open',
+    }, 'פתיחה בחלון מלא');
+
+    const frame = h('iframe', {
+      id: 'onboard-preview-frame',
+      class: 'onboard-preview-frame',
+      title: 'תצוגה מקדימה של דף ההזמנה',
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer',
+      sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups',
+    });
+    const frameWrap = h('div', {
+      class: 'onboard-preview-frame-wrap' + (href && sameOriginPreview(href) ? '' : ' hidden'),
+      id: 'onboard-preview-frame-wrap',
+    }, frame);
+    if (href && sameOriginPreview(href)) frame.src = href;
+
+    const syncShareTargets = (url) => {
+      href = url || '';
+      linkEl.href = url || '#';
+      linkEl.textContent = url || 'הקישור יופיע אחרי שמירת מזהה';
+      if (url) {
+        waBtn.href = `https://wa.me/?text=${encodeURIComponent(`שלום! לקביעת תור אצל ${b.name}: ${url}`)}`;
+        waBtn.classList.remove('hidden');
+        openFull.href = url;
+        openFull.classList.remove('hidden');
+      } else {
+        waBtn.classList.add('hidden');
+        openFull.classList.add('hidden');
+      }
+      if (url && sameOriginPreview(url)) {
+        frame.src = url;
+        frameWrap.classList.remove('hidden');
+      } else {
+        frame.removeAttribute('src');
+        frameWrap.classList.add('hidden');
+      }
+    };
+
     copyBtn.addEventListener('click', async () => {
-      const url = linkEl.href;
-      if (!url || url.endsWith('#')) { toast('אין עדיין קישור', true); return; }
-      try { await navigator.clipboard.writeText(url); toast('הקישור הועתק'); }
-      catch { toast('לא ניתן להעתיק', true); }
+      const url = linkEl.getAttribute('href');
+      if (!url || url === '#') { toast('אין עדיין קישור', true); return; }
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('הקישור הועתק — שלחו ללקוח');
+        copyBtn.classList.add('onboard-copied');
+        setTimeout(() => copyBtn.classList.remove('onboard-copied'), 1200);
+      } catch { toast('לא ניתן להעתיק', true); }
     });
 
-    const waHref = href
-      ? `https://wa.me/?text=${encodeURIComponent(`שלום! לקביעת תור אצל ${b.name}: ${href}`)}`
-      : null;
-    const waBtn = waHref
-      ? h('a', { class: 'btn outline', href: waHref, target: '_blank', rel: 'noopener', id: 'onboard-wa' }, 'וואטסאפ')
-      : null;
+    // K4: static card + optional sandboxed iframe (same origin / Pages)
+    const preview = h('div', { class: 'onboard-preview', id: 'onboard-preview' },
+      h('p', { class: 'muted', style: 'margin:0 0 6px' }, 'כך זה נראה ללקוח'),
+      h('div', { class: 'onboard-preview-card' },
+        h('strong', {}, b.name),
+        h('span', { class: 'muted' }, `בחרו ${providerLabel(b)} · שירות`),
+        h('span', { class: 'btn small primary', style: 'pointer-events:none' }, 'קביעת תור')),
+      frameWrap,
+      openFull);
 
-    // Optional slug edit (collapsed)
     const input = h('input', {
-      name: 'slug', id: 'onboard-slug', value: suggested, dir: 'ltr',
-      minlength: '3', maxlength: '40', pattern: '[a-z0-9][a-z0-9\\-]*[a-z0-9]',
+      name: 'slug', id: 'onboard-slug',
+      value: latinSuggested || liveSlug || '',
+      dir: 'ltr', minlength: '3', maxlength: '40',
+      pattern: '[a-z0-9][a-z0-9\\-]*[a-z0-9]',
       autocomplete: 'off', spellcheck: 'false',
+      'aria-describedby': 'onboard-slug-status',
     });
     const status = h('p', { class: 'muted', id: 'onboard-slug-status' });
+    const softHint = h('p', { class: 'muted', id: 'onboard-slug-hint' },
+      latinSuggested
+        ? 'אפשר לשמור מזהה קריא מהשם, או להשאיר את האוטומטי.'
+        : 'נשמור קישור קצר אוטומטי; אפשר לשנות כאן או בהגדרות.');
+
     let checkTimer;
     const check = async () => {
       const slug = input.value.trim().toLowerCase();
       input.value = slug;
+      if (!slug) {
+        status.textContent = softHint.textContent;
+        status.className = 'muted';
+        return false;
+      }
       const local = slugError(slug);
       if (local) { status.textContent = local; status.className = 'form-error'; return false; }
-      if (currentSlug && slug === currentSlug) {
-        status.textContent = 'פנוי'; status.className = 'muted ok'; return true;
+      if (liveSlug && slug === liveSlug) {
+        status.textContent = 'פנוי · זה הקישור הפעיל';
+        status.className = 'muted ok';
+        return true;
       }
       try {
         const res = await rpc('owner_slug_available', { p_slug: slug, p_business_id: b.id });
-        if (res === 'available') { status.textContent = 'פנוי'; status.className = 'muted ok'; return true; }
-        if (res === 'taken') { status.textContent = 'הקישור הזה כבר תפוס.'; status.className = 'form-error'; return false; }
-        status.textContent = 'קישור לא תקין.'; status.className = 'form-error'; return false;
-      } catch (err) { status.textContent = heError(err); status.className = 'form-error'; return false; }
+        if (res === 'available') {
+          status.textContent = 'פנוי · שינוי ישבור קישורים ישנים';
+          status.className = 'muted ok';
+          return true;
+        }
+        if (res === 'taken') {
+          status.textContent = 'הקישור הזה כבר תפוס.';
+          status.className = 'form-error';
+          return false;
+        }
+        status.textContent = 'קישור לא תקין.';
+        status.className = 'form-error';
+        return false;
+      } catch (err) {
+        status.textContent = heError(err);
+        status.className = 'form-error';
+        return false;
+      }
     };
     input.addEventListener('input', () => {
       clearTimeout(checkTimer);
-      checkTimer = setTimeout(async () => {
-        const ok = await check();
-        if (ok) {
-          const u = bookingUrl(input.value.trim().toLowerCase());
-          linkEl.href = u; linkEl.textContent = u;
-        }
-      }, 350);
+      checkTimer = setTimeout(() => { check(); }, 350);
     });
     setTimeout(check, 0);
 
-    const saveSlug = h('button', { type: 'button', class: 'btn ghost', id: 'onboard-save-slug' }, 'שמירת מזהה');
+    const saveSlug = h('button', {
+      type: 'button', class: 'btn ghost', id: 'onboard-save-slug',
+    }, 'שמירת מזהה');
     saveSlug.addEventListener('click', async () => {
       showErr(card, '');
       const slug = input.value.trim().toLowerCase();
-      if (currentSlug && slug === currentSlug) { toast('הקישור נשמר'); return; }
+      if (liveSlug && slug === liveSlug) { toast('הקישור כבר פעיל'); return; }
       if (!(await check())) return;
       saveSlug.disabled = true;
       try {
@@ -456,50 +546,53 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
           .eq('id', b.id).select('*'));
         if (!row) throw new Error('permission denied');
         Object.assign(state.business, row);
-        const u = bookingUrl(row.public_slug);
-        linkEl.href = u; linkEl.textContent = u;
+        liveSlug = (row.public_slug || '').toLowerCase();
+        syncShareTargets(bookingUrl(liveSlug));
         toast('הקישור נשמר');
+        await check();
       } catch (err) { showErr(card, heError(err)); }
       finally { saveSlug.disabled = false; }
     });
 
-    const preview = h('div', { class: 'onboard-preview' },
-      h('p', { class: 'muted', style: 'margin:0 0 6px' }, 'כך זה נראה ללקוח'),
-      h('div', { class: 'onboard-preview-card' },
-        h('strong', {}, b.name),
-        h('span', { class: 'muted' }, `בחרו ${providerLabel(b)} · שירות`),
-        h('span', { class: 'btn small primary', style: 'pointer-events:none' }, 'קביעת תור')),
-      href
-        ? h('a', {
-          class: 'btn link', href, target: '_blank', rel: 'noopener', id: 'onboard-preview-open',
-        }, 'פתיחה בחלון מלא')
-        : null);
+    const skipSlug = h('button', {
+      type: 'button', class: 'btn ghost', id: 'onboard-skip-slug',
+    }, 'להשאיר אוטומטי');
+    skipSlug.addEventListener('click', () => {
+      if (liveSlug) {
+        input.value = liveSlug;
+        syncShareTargets(bookingUrl(liveSlug));
+        check();
+      }
+      toast('נשאר הקישור האוטומטי');
+    });
 
-    const box = h('div', { id: 'onboard-finish' },
-      h('h3', { class: 'sub', style: 'margin-top:0' }, '✓ העסק מוכן לקבל תורים'),
-      h('p', {}, 'הקישור שלכם'),
+    // Secondary CTA — calendar (emotional primary is copy)
+    const toCal = h('button', {
+      type: 'button', class: 'btn', id: 'onboard-to-calendar',
+    }, 'מעבר ליומן הניהול');
+
+    const box = h('div', { id: 'onboard-finish', class: 'onboard-finish onboard-ready' },
+      h('h3', { class: 'sub onboard-ready-title', style: 'margin-top:0' }, '✓ העסק מוכן לקבל תורים'),
+      h('p', { class: 'onboard-share-label' }, 'הקישור שלכם'),
       linkEl,
-      h('div', { class: 'actions' }, copyBtn, waBtn),
+      h('div', { class: 'actions onboard-share-actions' }, copyBtn, waBtn),
       preview,
-      h('details', { class: 'onboard-slug-details', id: 'onboard-form-5' },
-        h('summary', {}, 'מזהה הקישור (אופציונלי)'),
+      h('div', { class: 'onboard-slug-panel', id: 'onboard-form-5' },
+        h('p', { class: 'onboard-slug-title' }, 'מזהה הקישור (אופציונלי)'),
+        softHint,
         h('label', {}, 'מזהה', input),
         status,
-        h('p', { class: 'muted' }, 'שינוי ישבור קישורים ישנים. אפשר להשאיר את האוטומטי.'),
-        h('div', { class: 'actions' },
-          h('button', { type: 'button', class: 'btn ghost', id: 'onboard-skip-slug',
-            onclick: () => toast('נשאר הקישור האוטומטי') }, 'להשאיר אוטומטי'),
-          saveSlug)),
+        h('div', { class: 'actions' }, skipSlug, saveSlug)),
       errBox(),
-      h('div', { class: 'actions' },
-        h('button', { type: 'button', class: 'btn primary', id: 'onboard-to-calendar' }, 'מעבר ליומן הניהול')));
+      h('div', { class: 'actions' }, toCal));
 
-    box.querySelector('#onboard-to-calendar').addEventListener('click', async () => {
+    toCal.addEventListener('click', async () => {
       try { await onDone?.(state.business); }
       catch (err) { showErr(box, heError(err)); }
     });
     return [box];
   }
+
 
   await paint();
 }
