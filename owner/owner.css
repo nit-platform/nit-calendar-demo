@@ -85,14 +85,11 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:10px}
 /* K3 nobiz + K1 onboard */
 .nobiz-actions{justify-content:stretch;margin-top:16px}
+#nobiz-hint,.nobiz-hint{color:var(--brand-2,#0b57d0);font-weight:600}
 .nobiz-actions .btn{flex:1 1 140px;min-height:44px}
 .onboard{max-width:520px;margin:0 auto;display:grid;gap:12px}
 .onboard-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .onboard-top h2{margin:0;font-size:1.15rem}
-.onboard-progress{display:flex;gap:6px}
-.onboard-progress span{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;background:#ececef;color:#555}
-.onboard-progress span.on{background:var(--brand);color:#fff}
-.onboard-progress span.done{background:#c8e6c9;color:#1b5e20}
 .onboard-card{display:grid;gap:10px}
 .onboard-summary{margin:0;padding-inline-start:1.2em;line-height:1.7}
 .muted.ok{color:#2e7d32;font-weight:600}
@@ -155,11 +152,17 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .staff-card.staff-incomplete{border-color:#f0c36d}
 .staff-add-hint{margin:0 0 10px;font-size:.9rem}
 
-/* K5/K1/K2 4-step onboard */
-.onboard-progress-wrap{display:grid;gap:6px}
+/* K5/K1/K2 4-step onboard + C1 continuous progress */
+.onboard-progress-wrap{display:grid;gap:8px}
 .onboard-progress-meta{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;font-weight:600}
 .onboard-progress-track{height:6px;border-radius:999px;background:#ececef;overflow:hidden}
-.onboard-progress-fill{height:100%;background:var(--brand);border-radius:999px;transition:width .25s ease}
+.onboard-progress-fill{height:100%;background:var(--brand);border-radius:999px;transition:width .35s ease}
+.onboard-progress{display:flex;gap:0;justify-content:space-between;position:relative;isolation:isolate}
+.onboard-progress::before{content:'';position:absolute;inset-inline:14px;top:50%;height:3px;background:#ececef;transform:translateY(-50%);z-index:0;border-radius:999px}
+.onboard-progress-line{position:absolute;inset-inline-start:14px;top:50%;height:3px;background:var(--brand);transform:translateY(-50%);z-index:0;border-radius:999px;transition:width .35s ease;pointer-events:none}
+.onboard-progress span{position:relative;z-index:1;width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;background:#fff;border:2px solid #d0d0d6;color:#555;box-sizing:border-box}
+.onboard-progress span.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent)}
+.onboard-progress span.done{background:#2e7d32;border-color:#2e7d32;color:#fff}
 .onboard-types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .onboard-type{display:grid;gap:4px;text-align:start;padding:12px;border:2px solid #e4e4e8;border-radius:12px;background:#fff;cursor:pointer;font:inherit;min-height:72px}
 .onboard-type:hover{border-color:#c5c5ca}
@@ -179,9 +182,12 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .btn.outline{background:#fff;border:1.5px solid var(--brand);color:var(--brand)}
 .onboard .btn.link{color:var(--brand)}
 
-/* K3/K4 share climax */
-.onboard-ready-title{animation:onboard-ready-pop .45s ease}
+/* K3/K4 share climax + C2 «מוכן!» */
+.onboard-ready{position:relative}
+.onboard-ready-burst{display:inline-block;margin:0 0 8px;padding:4px 12px;border-radius:999px;background:#e8f5e9;color:#1b5e20;font-weight:800;font-size:.95rem;animation:onboard-ready-burst .7s ease}
+.onboard-ready-title{animation:onboard-ready-pop .45s ease .15s both}
 @keyframes onboard-ready-pop{0%{transform:scale(.96);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+@keyframes onboard-ready-burst{0%{transform:scale(.6);opacity:0}40%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .onboard-share-label{font-weight:700;margin:0 0 4px}
 .onboard-share-actions{justify-content:stretch}
 .onboard-share-actions .btn{flex:1 1 140px;min-height:44px}
@@ -201,3 +207,9 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .setup-check-cta{margin-inline-start:auto}
 .empty-cal-cta,.empty-tab-cta{border:1px dashed #c5c5ca;background:#fafafa}
 .empty-cal-cta p,.empty-tab-cta p{margin:0 0 6px}
+
+/* C4: wizard actions pack to inline-start (right in RTL); primary first toward start */
+.onboard .actions{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+.onboard .actions .btn{order:0}
+.onboard .actions .btn.primary{order:-1}
+.onboard .actions.onboard-share-actions .btn{order:0}
