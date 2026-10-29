@@ -22,3 +22,14 @@ export function minutesOfDay(ts) {
 }
 export const hhmmToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 export const minToHHMM = (n) => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
+
+/** YYYY-MM-DD in the business timezone for any timestamptz / ISO string. */
+export function dayOfTs(ts) {
+  return new Date(ts).toLocaleDateString('en-CA', { timeZone: TIMEZONE });
+}
+/** e.g. "יום שני, 2 בנובמבר, 15:00" in business tz (never UTC slice). */
+export function fmtWhen(ts) {
+  if (!ts) return '';
+  return `${fmtLongDate(dayOfTs(ts))}, ${fmtTime(ts)}`;
+}
+

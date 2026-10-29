@@ -17,12 +17,21 @@ let toastTimer;
 export function toast(msg, isError = false) {
   const t = $('#toast');
   if (!t) return;
-  t.textContent = msg;
+  const text = String(msg || '').trim();
+  if (!text) {
+    t.textContent = '';
+    t.classList.remove('show', 'err');
+    return;
+  }
+  t.textContent = text;
   t.classList.toggle('err', isError);
   t.setAttribute('aria-live', isError ? 'assertive' : 'polite');
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), isError ? 7000 : 4000);
+  toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+    t.textContent = '';
+  }, isError ? 7000 : 4000);
 }
 export const shekel = (n) => `₪${Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
 

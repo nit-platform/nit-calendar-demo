@@ -2,7 +2,7 @@
 // Token stays in the URL/localStorage only; never sent elsewhere. Hebrew UI.
 import { api, friendlyError } from './api.js';
 import { $, h, muted, toast, shekel } from './ui.js';
-import { fmtTime, fmtLongDate, todayISO, addDays } from './time.js';
+import { fmtTime, fmtLongDate, dayOfTs, todayISO, addDays } from './time.js';
 import { DAYS_AHEAD } from './config.js';
 
 function askCancelConfirm() {
@@ -68,7 +68,7 @@ export async function renderManage(slug, token, box) {
       h('div', { class: 'summary' },
         h('div', {}, h('b', {}, data.service_name || 'שירות'),
           data.staff_name ? [' אצל ', h('b', {}, data.staff_name)] : null),
-        h('div', {}, fmtLongDate(data.starts_at.slice(0, 10)), ', ',
+        h('div', {}, fmtLongDate(dayOfTs(data.starts_at)), ', ',
           h('bdi', { dir: 'ltr' }, `${fmtTime(data.starts_at)}–${fmtTime(data.ends_at)}`)),
         data.price != null ? h('div', {}, `מחיר: ${shekel(data.price)}`) : null,
         h('div', {}, 'סטטוס: ', STATUS[data.status] || data.status)),

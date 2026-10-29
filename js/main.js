@@ -6,7 +6,8 @@
 // Every value from the server is inserted as text (textContent / text nodes), never as HTML.
 import { api, friendlyError } from './api.js';
 import { $, h, muted, providerLabel, toast } from './ui.js';
-import { getSlug, canonicalize, hasAuthCallback } from './router.js';
+import { fmtWhen } from './time.js';
+import { getSlug, slugAttempt, canonicalize, hasAuthCallback } from './router.js';
 import { initBooking, selectStaff, selection } from './booking.js';
 import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
 import { renderManage } from './manage.js';
@@ -22,6 +23,58 @@ function customerDisplayName(session) {
   if (!u) return '';
   const md = u.user_metadata || {};
   return (md.full_name || md.name || u.email || 'מחובר').trim();
+}
+
+
+/** Reload «התורים שלי» for the signed-in customer (after book / cancel). */
+export async function refreshMyAppts(slug) {
+  const myStep = $('#my-appts-step');
+  const box = $('#my-appts');
+  if (!myStep || !box || !slug) return;
+  if (!auth.googleSignInEnabled()) return;
+  const session = await auth.getCustomerSession();
+  if (!session) return;
+  myStep.classList.remove('hidden');
+  try {
+    const list = await api.myAppointments(slug);
+    if (!list.length) {
+      box.replaceChildren(muted('אין תורים קרובים לעסק הזה.'));
+      return;
+    }
+    box.replaceChildren(...list.map((a) => {
+      const kids = [
+        h('span', {}, `${a.service_name || 'תור'} · ${a.status}`),
+        h('span', { class: 'muted', dir: 'ltr' }, fmtWhen(a.starts_at)),
+      ];
+      if (a.can_cancel && a.appointment_id) {
+        kids.push(h('button', {
+          type: 'button', class: 'btn small danger my-appt-cancel',
+          'data-appt': a.appointment_id,
+          onclick: async (ev) => {
+            const btn = ev.currentTarget;
+            if (!confirm('לבטל את התור?')) return;
+            btn.disabled = true;
+            try {
+              await api.cancelMyAppointment(slug, a.appointment_id);
+              toast('התור בוטל');
+              await refreshMyAppts(slug);
+              // Slots may free up for waitlist / rebook.
+              try {
+                const { loadSlots } = await import('./booking.js');
+                if (typeof loadSlots === 'function') loadSlots();
+              } catch { /* optional */ }
+            } catch (e) {
+              toast(friendlyError(e), true);
+              btn.disabled = false;
+            }
+          },
+        }, 'ביטול'));
+      }
+      return h('div', { class: 'item', 'data-appt': a.appointment_id || '' }, ...kids);
+    }));
+  } catch {
+    box.replaceChildren(muted('לא ניתן לטעון תורים כרגע.'));
+  }
 }
 
 let _authSlug = null;
@@ -43,20 +96,7 @@ async function refreshAuthBar(slug) {
     user.textContent = name;
     if (status) { status.textContent = 'מחובר'; status.classList.remove('hidden'); }
     if (note) note.classList.remove('hidden');
-    if (myStep && slug) {
-      myStep.classList.remove('hidden');
-      try {
-        const list = await api.myAppointments(slug);
-        const box = $('#my-appts');
-        if (!list.length) box.replaceChildren(muted('אין תורים קרובים לעסק הזה.'));
-        else box.replaceChildren(...list.map((a) =>
-          h('div', { class: 'item' },
-            h('span', {}, `${a.service_name || 'תור'} · ${a.status}`),
-            h('span', { class: 'muted', dir: 'ltr' }, String(a.starts_at || '').replace('T', ' ').slice(0, 16)))));
-      } catch {
-        $('#my-appts').replaceChildren(muted('לא ניתן לטעון תורים כרגע.'));
-      }
-    }
+    if (myStep && slug) await refreshMyAppts(slug);
   } else {
     btnIn.classList.remove('hidden');
     btnOut.classList.add('hidden');
@@ -106,7 +146,12 @@ function wireAuthBar() {
 }
 
 
-function notFound() { show('missing'); document.title = 'NIT – הדף לא נמצא'; }
+function notFound() {
+  show('missing');
+  const h = document.querySelector('#view-missing h2');
+  if (h) h.textContent = 'העסק לא נמצא';
+  document.title = 'NIT – העסק לא נמצא';
+}
 const isNotFound = (e) => /business not found|barber not found/.test(e?.message || '');
 
 function setTitle(main, biz) {
@@ -177,19 +222,47 @@ async function startStaff(slug, barber) {
   await initBooking({ scope: { kind: 'staff', slug }, barber });
 }
 
+const LOAD_TIMEOUT_MS = 12000;
+
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(label || 'timeout')), ms);
+    promise.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
+
 async function start() {
-  const fromUrl = getSlug();
+  const attempt = slugAttempt();
+  if (attempt.kind === 'invalid') return notFound();
+  const fromUrl = attempt.kind === 'ok' ? attempt.slug : null;
   const slug = fromUrl || DEFAULT_BUSINESS_SLUG;
   try {
     let biz = null;
-    try { biz = await api.business(slug); } catch (e) { if (!isNotFound(e)) throw e; }
+    try {
+      biz = await withTimeout(api.business(slug), LOAD_TIMEOUT_MS, 'business load timeout');
+    } catch (e) {
+      if (isNotFound(e)) biz = null;
+      else if (/timeout/i.test(e?.message || '')) return notFound();
+      else throw e;
+    }
     if (biz) return await startBusiness(slug, biz, !!fromUrl);
     if (!fromUrl) return notFound();
     let barber = null;
-    try { barber = await api.barber(slug); } catch (e) { if (!isNotFound(e)) throw e; }
+    try {
+      barber = await withTimeout(api.barber(slug), LOAD_TIMEOUT_MS, 'barber load timeout');
+    } catch (e) {
+      if (isNotFound(e)) barber = null;
+      else if (/timeout/i.test(e?.message || '')) return notFound();
+      else throw e;
+    }
     if (!barber) return notFound();
     await startStaff(slug, barber);
-  } catch (e) { show('book'); $('#service-list').replaceChildren(muted(friendlyError(e))); }
+  } catch (e) {
+    // Network / unexpected errors on an explicit slug → clear not-found, not a hung loader.
+    if (fromUrl) return notFound();
+    show('book');
+    $('#service-list').replaceChildren(muted(friendlyError(e)));
+  }
 }
 start();
 

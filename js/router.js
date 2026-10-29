@@ -2,6 +2,16 @@
 //   /b/<slug>        -> 404.html redirects to ?b=<slug>, then we restore the pretty URL
 //   ?b=<slug>        and  #/b/<slug>
 const SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/;
+const SLUG_MAX = 40;
+
+function rawSlugParts() {
+  const fromPath = location.pathname.match(/\/b\/([^/?#]*)\/?$/)?.[1];
+  const q = new URLSearchParams(location.search);
+  const hasQuery = q.has('b');
+  const fromQuery = hasQuery ? q.get('b') : null;
+  const fromHash = location.hash.match(/^#\/b\/([^/?#]*)/)?.[1];
+  return { fromPath, fromQuery, hasQuery, fromHash };
+}
 
 export function siteBase() {
   const i = location.pathname.indexOf('/b/');
@@ -9,12 +19,31 @@ export function siteBase() {
   return location.pathname.replace(/[^/]*$/, '');      // folder of index.html
 }
 
+/** Valid slug or null. Invalid / empty / too-long explicit values do not fall back here. */
 export function getSlug() {
-  const fromPath = location.pathname.match(/\/b\/([^/?#]+)\/?$/)?.[1];
-  const fromQuery = new URLSearchParams(location.search).get('b');
-  const fromHash = location.hash.match(/^#\/b\/([^/?#]+)/)?.[1];
+  const { fromPath, fromQuery, fromHash } = rawSlugParts();
   const raw = decodeURIComponent(fromPath || fromQuery || fromHash || '').toLowerCase();
   return SLUG_RE.test(raw) ? raw : null;
+}
+
+/**
+ * How the URL names a business:
+ *   none     – no ?b= / /b/ / #/b/ → caller may use the demo default
+ *   ok       – well-formed slug
+ *   invalid  – present but empty, too long, or not matching SLUG_RE
+ */
+export function slugAttempt() {
+  const { fromPath, fromQuery, hasQuery, fromHash } = rawSlugParts();
+  const explicit = fromPath != null || hasQuery || fromHash != null;
+  if (!explicit) return { kind: 'none' };
+  let raw = '';
+  try {
+    raw = decodeURIComponent(fromPath || fromQuery || fromHash || '').toLowerCase();
+  } catch {
+    return { kind: 'invalid', raw: '' };
+  }
+  if (!raw || raw.length > SLUG_MAX || !SLUG_RE.test(raw)) return { kind: 'invalid', raw };
+  return { kind: 'ok', slug: raw };
 }
 
 /** True while the URL still carries an OAuth/PKCE (or implicit) callback payload. */

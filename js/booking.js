@@ -3,6 +3,7 @@
 import { api, friendlyError, HOLD_VIA_FUNCTION } from './api.js';
 import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
+import { normalizeName, contactError } from './validate.js';
 import { DAYS_AHEAD } from './config.js';
 import { addToken, renderInbox } from './waitlist.js';
 import { saveManageLink, bookingManageLink } from './manage.js';
@@ -31,9 +32,26 @@ export async function initBooking({ scope, barber }) {
   if (barber) loadServices();
   const di = $('#date-input');
   di.min = todayISO(); di.max = addDays(todayISO(), DAYS_AHEAD); di.value = state.date;
-  di.addEventListener('change', () => di.value && setDate(di.value));
+  const onDateInput = () => {
+    if (!di.value) return;
+    const min = di.min, max = di.max;
+    if (di.value < min) {
+      di.value = min;
+      toast('התאריך מוקדם מדי — עודכן ליום הראשון הזמין', true);
+      setDate(min); return;
+    }
+    if (di.value > max) {
+      di.value = max;
+      toast('התאריך מאוחר מדי — עודכן ליום האחרון הזמין', true);
+      setDate(max); return;
+    }
+    setDate(di.value);
+  };
+  di.addEventListener('change', onDateInput);
+  di.addEventListener('input', onDateInput);
   $('#date-prev').addEventListener('click', () => setDate(addDays(state.date, -1)));
   $('#date-next').addEventListener('click', () => setDate(addDays(state.date, 1)));
+  wireDateStripScroll();
   renderDateStrip();
   $('#book-cancel').addEventListener('click', () => $('#book-dialog').close());
   $('#book-form').addEventListener('submit', submitBooking);
@@ -90,6 +108,33 @@ function setDate(iso) {
   state.date = iso; $('#date-input').value = iso; renderDateStrip(); loadSlots();
 }
 
+/** Customer-facing end = start + service duration (excludes buffer_after / layout buffer step). */
+function customerSlotEnd(slotStart, durationMin) {
+  const ms = new Date(slotStart).getTime() + Number(durationMin || 0) * 60000;
+  return new Date(ms).toISOString();
+}
+
+function wireDateStripScroll() {
+  const strip = $('#date-strip');
+  const prev = $('#strip-prev'), next = $('#strip-next');
+  if (!strip || strip.dataset.scrollWired) return;
+  strip.dataset.scrollWired = '1';
+  const step = () => Math.max(120, Math.floor(strip.clientWidth * 0.7));
+  if (prev) prev.addEventListener('click', () => { strip.scrollBy({ left: step(), behavior: 'smooth' }); }); // RTL: left = toward start
+  if (next) next.addEventListener('click', () => { strip.scrollBy({ left: -step(), behavior: 'smooth' }); });
+  const sync = () => {
+    const wrap = strip.closest('.date-strip-wrap');
+    if (!wrap) return;
+    const max = strip.scrollWidth - strip.clientWidth - 2;
+    const sl = Math.abs(strip.scrollLeft);
+    wrap.classList.toggle('at-start', sl <= 2);
+    wrap.classList.toggle('at-end', sl >= max);
+  };
+  strip.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  setTimeout(sync, 0);
+}
+
 function renderDateStrip() {
   const days = Array.from({ length: DAYS_AHEAD + 1 }, (_, i) => addDays(todayISO(), i));
   const strip = $('#date-strip');
@@ -141,13 +186,20 @@ function renderSlots(rows) {
 async function openDialog(slot) {
   const svc = state.services.find((s) => s.service_id === state.serviceId);
   state.pending = slot;
-  $('#book-summary').replaceChildren(
+  // Customer duration excludes buffer_after (included in slot_end for scheduling only).
+  const endTs = customerSlotEnd(slot.slot_start, svc.total_duration_min);
+  const summaryKids = [
     state.barber.display_name
       ? h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.barber.display_name))
       : h('div', {}, h('b', {}, svc.name)),
-    h('div', {}, `${fmtLongDate(state.date)}, `, h('bdi', { dir: 'ltr' }, `${fmtTime(slot.slot_start)}–${fmtTime(slot.slot_end)}`)),
+    h('div', {}, `${fmtLongDate(state.date)}, `, h('bdi', { dir: 'ltr' }, `${fmtTime(slot.slot_start)}–${fmtTime(endTs)}`),
+      ` · ${svc.total_duration_min} דק׳`),
     h('div', {}, `מחיר: ${priceText(svc)}`),
-    slot.is_dead_time_fill ? h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה ביומן')) : null);
+  ];
+  if (slot.is_dead_time_fill) {
+    summaryKids.push(h('div', {}, h('span', { class: 'badge' }, 'בזמן המתנה ביומן')));
+  }
+  $('#book-summary').replaceChildren(...summaryKids);
   $('#book-error').textContent = '';
   const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
   const note = $('#book-auth-note'), holdNote = $('#book-hold-note'), cap = $('#book-captcha');
@@ -187,14 +239,19 @@ function finishBookSuccess(res) {
     book.prepend(note);
   }
   if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
+  if (state.scope.kind === 'biz') {
+    import('./main.js').then((m) => m.refreshMyAppts?.(state.scope.slug)).catch(() => {});
+  }
   loadSlots();
 }
 
 async function submitBooking(ev) {
   ev.preventDefault();
   const f = ev.target, btn = $('#book-submit');
-  const name = f.elements.name.value.trim(), phone = f.elements.phone.value.trim();
-  if (name.length < 2) { $('#book-error').textContent = 'נא להזין שם'; return; }
+  const name = normalizeName(f.elements.name.value), phone = f.elements.phone.value.trim();
+  const cerr = contactError(name, phone);
+  if (cerr) { $('#book-error').textContent = cerr; return; }
+  f.elements.name.value = name;
   btn.disabled = true; $('#book-error').textContent = '';
   try {
     const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;

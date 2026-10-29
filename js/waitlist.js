@@ -8,6 +8,7 @@ import { api, friendlyError, WAITLIST_VIA_FUNCTION } from './api.js';
 import { initWlCaptcha, wlCaptchaToken, resetWlCaptcha } from './wl-captcha.js';
 import { $, h, muted, toast } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate } from './time.js';
+import { normalizeName, contactError, waitlistRangeError } from './validate.js';
 
 const KEY = (slug) => `nit-access:${slug}`;
 const TOKEN_RE = /^[0-9a-f]{64}$/;
@@ -77,10 +78,13 @@ export async function renderInbox(slug) {
           rerender(); } }, 'יציאה מהרשימה')
       : null);
   const noteItem = (n) => h('div', { class: 'item' }, h('span', {}, h('b', {}, KIND[n.kind] || 'הודעה'),
-    n.starts_at ? ` · ${when(n.starts_at)}` : '', n.service_name ? ` · ${n.service_name}` : '', h('small', { class: 'muted' }, ` · ${when(n.at)}`)));
-  box.replaceChildren(
-    entries.length ? h('div', {}, h('h3', {}, 'רשימות המתנה'), h('div', { class: 'list' }, entries.map(entryItem))) : null,
-    notes.length ? h('div', {}, h('h3', {}, 'הודעות'), h('div', { class: 'list' }, notes.slice(0, 10).map(noteItem))) : null);
+    n.starts_at ? ` · ${when(n.starts_at)}` : '',
+    (n.service_name && n.service_name !== 'null') ? ` · ${n.service_name}` : '',
+    n.at ? h('small', { class: 'muted' }, ` · ${when(n.at)}`) : null));
+  const parts = [];
+  if (entries.length) parts.push(h('div', {}, h('h3', {}, 'רשימות המתנה'), h('div', { class: 'list' }, ...entries.map(entryItem).filter(Boolean))));
+  if (notes.length) parts.push(h('div', {}, h('h3', {}, 'הודעות'), h('div', { class: 'list' }, ...notes.slice(0, 10).map(noteItem).filter(Boolean))));
+  box.replaceChildren(...parts);
 }
 export function startInboxPolling(slug) {
   renderInbox(slug);
@@ -109,10 +113,18 @@ export function initWaitlist(slug, selection) {
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements, sel = selection(), btn = $('#wl-submit');
-    const name = f.name.value.trim(), phone = f.phone.value.trim();
-    if (name.length < 2) { $('#wl-error').textContent = 'נא להזין שם'; return; }
-    if (f.to.value < f.from.value) { $('#wl-error').textContent = 'תאריך הסיום לפני תאריך ההתחלה'; return; }
-    if (!!f.tfrom.value !== !!f.tto.value || (f.tfrom.value && f.tto.value <= f.tfrom.value)) { $('#wl-error').textContent = 'טווח שעות לא תקין'; return; }
+    const name = normalizeName(f.name.value), phone = f.phone.value.trim();
+    const cerr = contactError(name, phone);
+    if (cerr) { $('#wl-error').textContent = cerr; return; }
+    // Clamp dates to the inputs' min/max before range checks.
+    const min = f.from.min || todayISO(), max = f.from.max || addDays(min, 30);
+    if (f.from.value && f.from.value < min) f.from.value = min;
+    if (f.from.value && f.from.value > max) f.from.value = max;
+    if (f.to.value && f.to.value < min) f.to.value = min;
+    if (f.to.value && f.to.value > max) f.to.value = max;
+    const rerr = waitlistRangeError(f.from.value, f.to.value, f.tfrom.value, f.tto.value);
+    if (rerr) { $('#wl-error').textContent = rerr; return; }
+    f.name.value = name;
     const captcha = WAITLIST_VIA_FUNCTION ? wlCaptchaToken() : '';
     if (WAITLIST_VIA_FUNCTION && !captcha) { $('#wl-error').textContent = 'נא להשלים את בדיקת האבטחה.'; return; }
     btn.disabled = true; $('#wl-error').textContent = '';

@@ -131,6 +131,8 @@ export const api = {
     auth.customerRpc('customer_confirm_hold', {
       p_slug: slug, p_hold_token: holdToken, p_customer_name: name, p_phone: phone,
     }),
+  cancelMyAppointment: (slug, appointmentId) =>
+    auth.customerRpc('customer_cancel_appointment', { p_slug: slug, p_appointment_id: appointmentId }),
   myAppointments: async (slug) => {
     if (!auth.googleSignInEnabled()) return [];
     const session = await auth.getCustomerSession();
