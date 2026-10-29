@@ -1,8 +1,8 @@
 :root{--bg:#f6f4f0;--card:#fff;--ink:#1d1d1f;--muted:#6b6b70;--brand:#1f3a5f;--brand-2:#2f5d8a;
 --work:#1f3a5f;--wait:#cfe3f7;--fill:#e8a317;--fill-bg:#fff4dc;--buffer:#d9d9de;--err:#b3261e;--ok:#1e7d3a;--r:14px;
-font-family:system-ui,-apple-system,"Segoe UI","Heebo","Rubik",Arial,sans-serif}
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);line-height:1.45;padding-bottom:env(safe-area-inset-bottom)}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.45;padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
 .top{background:var(--brand);color:#fff;padding:16px 16px 0;position:sticky;top:0;z-index:5}
 .top h1{margin:0;font-size:1.4rem}.top h1 span{font-weight:400;font-size:1rem;opacity:.85;margin-inline-start:6px}
 .demo-badge{margin:4px 0 10px;font-size:.8rem;opacity:.8}
@@ -23,7 +23,15 @@ main{max-width:760px;margin:0 auto;padding:12px}
 .date-row{display:flex;gap:6px;align-items:center}
 .date-row input{flex:1;font:inherit;padding:9px;border:1.5px solid #d7d7dc;border-radius:10px;min-width:0}
 .icon-btn{font:inherit;font-size:1.15rem;width:44px;height:44px;border-radius:10px;border:1.5px solid #d7d7dc;background:#fff;cursor:pointer}
-.date-strip{display:flex;gap:6px;overflow-x:auto;padding-top:10px;scrollbar-width:none}
+.date-strip-wrap{position:relative;display:flex;align-items:center;gap:4px;margin-top:10px}
+.date-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 4px;scrollbar-width:none;flex:1;min-width:0;
+  mask-image:linear-gradient(to left,transparent,#000 16px,#000 calc(100% - 16px),transparent);
+  -webkit-mask-image:linear-gradient(to left,transparent,#000 16px,#000 calc(100% - 16px),transparent)}
+.date-strip-wrap.at-start .date-strip{mask-image:linear-gradient(to left,transparent,#000 16px,#000 100%);-webkit-mask-image:linear-gradient(to left,transparent,#000 16px,#000 100%)}
+.date-strip-wrap.at-end .date-strip{mask-image:linear-gradient(to left,#000 0,#000 calc(100% - 16px),transparent);-webkit-mask-image:linear-gradient(to left,#000 0,#000 calc(100% - 16px),transparent)}
+.date-strip-wrap.at-start.at-end .date-strip{mask-image:none;-webkit-mask-image:none}
+.strip-nav{flex:0 0 auto;width:36px;height:44px;border-radius:10px;border:1.5px solid #d7d7dc;background:#fff;cursor:pointer;font-size:1.2rem;line-height:1;color:var(--brand)}
+.strip-nav:disabled,.date-strip-wrap.at-start .strip-prev,.date-strip-wrap.at-end .strip-next{opacity:.35;cursor:default}
 .day-chip{border-radius:10px;padding:8px 12px;text-align:center;flex:0 0 auto;line-height:1.2;min-width:44px;min-height:44px}
 .day-chip small{display:block;font-size:.75rem;opacity:.8}
 .legend{font-size:.85rem;color:var(--muted);margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
@@ -49,8 +57,10 @@ dialog input{font:inherit;padding:10px;border:1.5px solid #d7d7dc;border-radius:
 .btn{font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;border:0;cursor:pointer}
 .btn.primary{background:var(--brand);color:#fff}.btn.ghost{background:transparent;color:var(--ink)}
 .btn:disabled{opacity:.5;cursor:wait}
-.toast{position:fixed;inset-inline:12px;bottom:16px;margin:auto;max-width:480px;background:var(--ok);color:#fff;padding:12px 16px;border-radius:12px;transform:translateY(150%);transition:transform .25s;z-index:20}
-.toast.show{transform:none}.toast.err{background:var(--err)}
+.toast{position:fixed;inset-inline:12px;bottom:16px;margin:auto;max-width:480px;background:var(--ok);color:#fff;padding:12px 16px;border-radius:12px;transform:translateY(150%);transition:transform .25s,opacity .2s;z-index:20;opacity:0;visibility:hidden;pointer-events:none;min-height:0}
+.toast:empty,.toast:not(.show){opacity:0;visibility:hidden;pointer-events:none;padding:0;min-height:0;transform:translateY(150%)}
+.toast.show:not(:empty){transform:none;opacity:1;visibility:visible;pointer-events:auto;padding:12px 16px}
+.toast.err{background:var(--err)}
 .foot{text-align:center;color:var(--muted);font-size:.8rem;padding:20px}
 .steps>li,.card{min-width:0}
 html,body{overflow-x:hidden}
