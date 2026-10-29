@@ -176,7 +176,17 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .onboard-share-url{display:block;font-family:ui-monospace,monospace;font-size:.9rem;word-break:break-all;padding:12px;border-radius:10px;background:#f6f8fb;border:1px solid #e4ebf5;margin:6px 0 10px}
 .onboard-preview{margin:12px 0;padding:12px;border-radius:12px;border:1px solid #ececef;background:#fafafa}
 .onboard-preview-card{display:grid;gap:6px;padding:14px;border-radius:12px;background:#fff;border:1px solid #e4e4e8;max-width:280px}
-.onboard-slug-details{margin:8px 0;border:1px solid #ececef;border-radius:10px;padding:8px 12px;background:#fff}
-.onboard-slug-details summary{cursor:pointer;font-weight:600;min-height:36px;display:flex;align-items:center}
 .btn.outline{background:#fff;border:1.5px solid var(--brand);color:var(--brand)}
 .onboard .btn.link{color:var(--brand)}
+
+/* K3/K4 share climax */
+.onboard-ready-title{animation:onboard-ready-pop .45s ease}
+@keyframes onboard-ready-pop{0%{transform:scale(.96);opacity:0}60%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+.onboard-share-label{font-weight:700;margin:0 0 4px}
+.onboard-share-actions{justify-content:stretch}
+.onboard-share-actions .btn{flex:1 1 140px;min-height:44px}
+.onboard-copied{box-shadow:0 0 0 2px #2e7d32 inset}
+.onboard-preview-frame-wrap{margin:10px 0;border:1px solid #e4e4e8;border-radius:12px;overflow:hidden;background:#fff;max-width:360px}
+.onboard-preview-frame{display:block;width:100%;height:280px;border:0;background:#fff;transform:scale(1);transform-origin:top right}
+.onboard-slug-panel{margin:10px 0;padding:12px;border:1px solid #ececef;border-radius:12px;background:#fff;display:grid;gap:6px}
+.onboard-slug-title{margin:0;font-weight:700}
