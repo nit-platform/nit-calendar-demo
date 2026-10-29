@@ -7,7 +7,7 @@
 import { api, friendlyError } from './api.js';
 import { $, h, muted, providerLabel, toast } from './ui.js';
 import { fmtWhen } from './time.js';
-import { getSlug, slugAttempt, canonicalize, hasAuthCallback } from './router.js';
+import { getSlug, slugAttempt, canonicalize, hasAuthCallback, siteBase } from './router.js';
 import { initBooking, selectStaff, selection } from './booking.js';
 import { initWaitlist, startInboxPolling, renderOffer } from './waitlist.js';
 import { renderManage } from './manage.js';
@@ -17,6 +17,16 @@ import { maybeShowWelcome, hideWelcome } from './welcome.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
+
+/** Absolute favicon so /b/<slug> does not request a relative /b/favicon.svg (404). */
+function fixFavicon() {
+  const link = document.querySelector('link[rel="icon"]');
+  if (!link) return;
+  const base = siteBase();
+  const root = `${location.origin}${base.endsWith('/') ? base : `${base}/`}`;
+  try { link.href = new URL('favicon.svg', root).href; } catch { /* ignore */ }
+}
+
 
 function customerDisplayName(session) {
   const u = session?.user;
@@ -42,8 +52,10 @@ export async function refreshMyAppts(slug) {
       return;
     }
     box.replaceChildren(...list.map((a) => {
+      const statusHe = ({ confirmed: 'מאושר', pending: 'ממתין לאישור', cancelled: 'בוטל',
+        completed: 'הושלם', no_show: 'לא הגיע' })[a.status] || a.status;
       const kids = [
-        h('span', {}, `${a.service_name || 'תור'} · ${a.status}`),
+        h('span', {}, `${a.service_name || 'תור'} · ${statusHe}`),
         h('span', { class: 'muted', dir: 'ltr' }, fmtWhen(a.starts_at)),
       ];
       if (a.can_cancel && a.appointment_id) {
@@ -152,7 +164,7 @@ function notFound() {
   if (h) h.textContent = 'העסק לא נמצא';
   document.title = 'NIT – העסק לא נמצא';
 }
-const isNotFound = (e) => /business not found|barber not found/.test(e?.message || '');
+const isNotFound = (e) => /business not found|barber not found|PT404|PGRST116/.test(`${e?.message || ''} ${e?.code || ''}`) || e?.code === 'PGRST116' || e?.status === 404;
 
 function setTitle(main, biz) {
   const el = $('#business-title') || $('#barber-title');
@@ -232,10 +244,13 @@ function withTimeout(promise, ms, label) {
 }
 
 async function start() {
+  fixFavicon();
   const attempt = slugAttempt();
   if (attempt.kind === 'invalid') return notFound();
   const fromUrl = attempt.kind === 'ok' ? attempt.slug : null;
+  // Root with no slug uses the demo business; never call RPCs with an empty slug.
   const slug = fromUrl || DEFAULT_BUSINESS_SLUG;
+  if (!slug) return notFound();
   try {
     let biz = null;
     try {
@@ -245,6 +260,7 @@ async function start() {
       else if (/timeout/i.test(e?.message || '')) return notFound();
       else throw e;
     }
+    // Soft RPC returns [] → null quickly; no hung «טוען…» waiting on a second timeout.
     if (biz) return await startBusiness(slug, biz, !!fromUrl);
     if (!fromUrl) return notFound();
     let barber = null;
@@ -264,6 +280,7 @@ async function start() {
     $('#service-list').replaceChildren(muted(friendlyError(e)));
   }
 }
+fixFavicon();
 start();
 
 // A hash-only change (e.g. typing #/b/<slug>) does not reload the page; reload if the slug changed.

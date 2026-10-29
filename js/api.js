@@ -91,8 +91,15 @@ async function viaFunction(name, body) {
 //                                      (staffId null when the business auto-assigns a provider)
 // The server re-checks that staffId belongs to that business; nothing else is reachable.
 export const api = {
-  barber: async (slug) => (await rpc('demo_barber', { p_slug: slug }))[0] ?? null,
-  business: async (slug) => (await rpc('public_business', { p_slug: slug }))[0] ?? null,
+  // Skip RPC when slug is empty/null — avoids PostgREST 404 console noise on root/?b=.
+  barber: async (slug) => {
+    if (!slug) return null;
+    return (await rpc('demo_barber', { p_slug: slug }))[0] ?? null;
+  },
+  business: async (slug) => {
+    if (!slug) return null;
+    return (await rpc('public_business', { p_slug: slug }))[0] ?? null;
+  },
   listServices: (sc) => sc.kind === 'biz'
     ? rpc('public_list_services', { p_slug: sc.slug, p_staff_id: sc.staffId })
     : rpc('demo_list_services', { p_slug: sc.slug }),

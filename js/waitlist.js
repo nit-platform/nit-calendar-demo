@@ -110,20 +110,43 @@ export function initWaitlist(slug, selection) {
     if (WAITLIST_VIA_FUNCTION) initWlCaptcha($('#wl-captcha'));
   });
   $('#wl-cancel').addEventListener('click', () => dlg.close());
+  const syncWlValidity = () => {
+    const f = form.elements;
+    const name = normalizeName(f.name.value);
+    const cerr = contactError(name, f.phone.value.trim());
+    f.name.setCustomValidity(cerr && /שם/.test(cerr) ? 'נא להזין שם מלא (לפחות 2 תווים)' : '');
+    f.phone.setCustomValidity(cerr && /טלפון/.test(cerr) ? cerr : '');
+    const rerr = waitlistRangeError(f.from.value, f.to.value, f.tfrom.value, f.tto.value);
+    f.from.setCustomValidity(rerr && /תאריך/.test(rerr) ? rerr : '');
+    f.to.setCustomValidity(rerr && /תאריך/.test(rerr) ? rerr : '');
+    f.tfrom.setCustomValidity(rerr && /שע|טווח שעות/.test(rerr) ? rerr : '');
+    f.tto.setCustomValidity(rerr && /שע|טווח שעות/.test(rerr) ? rerr : '');
+    return { cerr, rerr, name };
+  };
+  for (const el of [form.elements.name, form.elements.phone, form.elements.from, form.elements.to, form.elements.tfrom, form.elements.tto]) {
+    el.addEventListener('input', () => { syncWlValidity(); $('#wl-error').textContent = ''; });
+    el.addEventListener('change', () => { syncWlValidity(); });
+  }
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = form.elements, sel = selection(), btn = $('#wl-submit');
-    const name = normalizeName(f.name.value), phone = f.phone.value.trim();
-    const cerr = contactError(name, phone);
-    if (cerr) { $('#wl-error').textContent = cerr; return; }
     // Clamp dates to the inputs' min/max before range checks.
     const min = f.from.min || todayISO(), max = f.from.max || addDays(min, 30);
     if (f.from.value && f.from.value < min) f.from.value = min;
     if (f.from.value && f.from.value > max) f.from.value = max;
     if (f.to.value && f.to.value < min) f.to.value = min;
     if (f.to.value && f.to.value > max) f.to.value = max;
-    const rerr = waitlistRangeError(f.from.value, f.to.value, f.tfrom.value, f.tto.value);
-    if (rerr) { $('#wl-error').textContent = rerr; return; }
+    const { cerr, rerr, name } = syncWlValidity();
+    if (cerr) {
+      $('#wl-error').textContent = cerr;
+      (/שם/.test(cerr) ? f.name : f.phone).reportValidity();
+      return;
+    }
+    if (rerr) {
+      $('#wl-error').textContent = rerr;
+      ( /תאריך/.test(rerr) ? (f.to.value < f.from.value ? f.to : f.from) : f.tto).reportValidity();
+      return;
+    }
     f.name.value = name;
     const captcha = WAITLIST_VIA_FUNCTION ? wlCaptchaToken() : '';
     if (WAITLIST_VIA_FUNCTION && !captcha) { $('#wl-error').textContent = 'נא להשלים את בדיקת האבטחה.'; return; }

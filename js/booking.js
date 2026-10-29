@@ -238,8 +238,11 @@ function finishBookSuccess(res) {
     if (oldN) oldN.remove();
     book.prepend(note);
   }
-  if (state.scope.kind === 'biz' && res.access_token) { addToken(state.scope.slug, res.access_token); renderInbox(state.scope.slug); }
   if (state.scope.kind === 'biz') {
+    if (res.access_token) addToken(state.scope.slug, res.access_token);
+    // Always refresh inbox after book so «התור נקבע» appears even when access_token is not re-issued.
+    renderInbox(state.scope.slug);
+    setTimeout(() => renderInbox(state.scope.slug), 1200);
     import('./main.js').then((m) => m.refreshMyAppts?.(state.scope.slug)).catch(() => {});
   }
   loadSlots();
@@ -248,10 +251,18 @@ function finishBookSuccess(res) {
 async function submitBooking(ev) {
   ev.preventDefault();
   const f = ev.target, btn = $('#book-submit');
-  const name = normalizeName(f.elements.name.value), phone = f.elements.phone.value.trim();
+  const nameEl = f.elements.name, phoneEl = f.elements.phone;
+  const name = normalizeName(nameEl.value), phone = phoneEl.value.trim();
+  nameEl.value = name; // trim spaces-only before validity
   const cerr = contactError(name, phone);
-  if (cerr) { $('#book-error').textContent = cerr; return; }
-  f.elements.name.value = name;
+  nameEl.setCustomValidity(cerr && /שם/.test(cerr) ? cerr : '');
+  phoneEl.setCustomValidity(cerr && /טלפון/.test(cerr) ? cerr : '');
+  if (cerr) {
+    $('#book-error').textContent = cerr;
+    ( /שם/.test(cerr) ? nameEl : phoneEl).reportValidity();
+    return;
+  }
+  nameEl.setCustomValidity(''); phoneEl.setCustomValidity('');
   btn.disabled = true; $('#book-error').textContent = '';
   try {
     const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
