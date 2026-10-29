@@ -8,6 +8,7 @@
   <title>NIT – הדגמת יומן חכם לעסקי שירות</title>
   <meta name="description" content="הדגמה: קביעת תור חכמה עם ניצול זמני המתנה">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
 
@@ -33,7 +34,7 @@
   </header>
 
   <main>
-    <section id="view-missing" class="view hidden"><div class="card"><h2>הדף לא נמצא</h2>
+    <section id="view-missing" class="view hidden"><div class="card"><h2>העסק לא נמצא</h2>
       <p class="muted">הקישור לא תקין או שהעסק לא קיים. לכל עסק יש קישור הזמנה אישי (למשל <bdi dir="ltr">…/?b=my-salon</bdi>). בקשו מהעסק את הקישור שלו.</p></div></section>
     <section id="view-book" class="view" aria-label="קביעת תור">
       <ol class="steps">
@@ -46,13 +47,17 @@
           <div id="service-list" class="services"><p class="muted">טוען…</p></div>
         </li>
         <li class="card">
-          <h2 id="date-heading"><span class="num">2</span> בחירת תאריך</h2>
+          <h2><span class="num" aria-hidden="true">2</span> <span id="date-heading">בחירת תאריך</span></h2>
           <div class="date-row">
             <button class="icon-btn" id="date-prev" type="button" aria-label="יום קודם">◀</button>
             <input type="date" id="date-input" aria-labelledby="date-heading">
             <button class="icon-btn" id="date-next" type="button" aria-label="יום הבא">▶</button>
           </div>
-          <div id="date-strip" class="date-strip"></div>
+          <div class="date-strip-wrap at-start">
+            <button type="button" class="strip-nav strip-prev" id="strip-prev" aria-label="גלילה לימים קודמים">›</button>
+            <div id="date-strip" class="date-strip" tabindex="0"></div>
+            <button type="button" class="strip-nav strip-next" id="strip-next" aria-label="גלילה לימים הבאים">‹</button>
+          </div>
         </li>
         <li class="card">
           <h2><span class="num">3</span> בחירת שעה</h2>
@@ -86,12 +91,12 @@
 
   </main>
 
-  <dialog id="book-dialog">
-    <form id="book-form" method="dialog">
-      <h2>אישור תור</h2>
+  <dialog id="book-dialog" role="dialog" aria-modal="true" aria-labelledby="book-dialog-title">
+    <form id="book-form" method="dialog" novalidate="">
+      <h2 id="book-dialog-title">אישור תור</h2>
       <div id="book-summary" class="summary"></div>
       <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
-      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="[0-9+\-\s]{9,16}" dir="ltr"></label>
+      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="(?:05[0-9\-\s]{8,12}|\+9725[0-9\-\s]{8,12}|9725[0-9\-\s]{8,12})" dir="ltr"></label>
       <p id="book-auth-note" class="muted small hidden">מחובר עם Google — התור יישמר כמאומת.</p>
       <p id="book-hold-note" class="muted small hidden">השעה תישמר לכמה דקות בזמן ההתחברות עם Google.</p>
       <div id="book-captcha" class="captcha hidden" aria-label="בדיקת אבטחה"></div>
@@ -103,9 +108,9 @@
     </form>
   </dialog>
 
-  <dialog id="wl-dialog">
-    <form id="wl-form" method="dialog">
-      <h2>הצטרפות לרשימת המתנה</h2>
+  <dialog id="wl-dialog" role="dialog" aria-modal="true" aria-labelledby="wl-dialog-title">
+    <form id="wl-form" method="dialog" novalidate="">
+      <h2 id="wl-dialog-title">הצטרפות לרשימת המתנה</h2>
       <div id="wl-summary" class="summary"></div>
       <div class="row">
         <label>מתאריך <input type="date" name="from" required></label>
@@ -116,7 +121,7 @@
         <label>עד שעה <input type="time" name="tto" step="300"></label>
       </div>
       <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
-      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="[0-9+\-\s]{9,16}" dir="ltr"></label>
+      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="(?:05[0-9\-\s]{8,12}|\+9725[0-9\-\s]{8,12}|9725[0-9\-\s]{8,12})" dir="ltr"></label>
       <div id="wl-captcha" class="captcha hidden"></div>
       <p class="form-error" id="wl-error" role="alert"></p>
       <div class="actions">
