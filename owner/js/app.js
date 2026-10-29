@@ -34,12 +34,34 @@ export async function reloadContext() {
 
 function dismissKey() { return ctx.business ? `nit-setup-dismiss:${ctx.business.id}` : ''; }
 
-/** B10: dismissible setup checklist when staff / hours / active service / public_slug missing. */
+/** B5/B10: setup steps for banner + calendar checklist card. */
+export function getSetupSteps() {
+  if (!ctx.business) return [];
+  return [
+    { ok: (ctx.staff || []).some((s) => s.is_active), tab: 'staff', label: 'צוות' },
+    { ok: !!ctx.hasHours, tab: 'hours', label: 'שעות' },
+    { ok: (ctx.services || []).some((s) => s.is_active), tab: 'services', label: 'שירות' },
+    { ok: !!ctx.business.public_slug, tab: 'settings', label: 'שיתוף קישור', cta: 'העתיקו עכשיו' },
+  ];
+}
+
+export function isSetupDismissed() {
+  return !!(dismissKey() && localStorage.getItem(dismissKey()));
+}
+
+export function dismissSetup() {
+  const k = dismissKey();
+  if (k) localStorage.setItem(k, '1');
+  const el = $('#setup-banner');
+  if (el) { el.classList.add('hidden'); el.replaceChildren(); }
+}
+
+/** B10: compact banner outside calendar; B5 card lives in calendar.js. */
 export async function refreshSetupBanner() {
   const el = $('#setup-banner');
   if (!el) return;
   if (!ctx.business || !ctx.user) { el.classList.add('hidden'); el.replaceChildren(); return; }
-  if (localStorage.getItem(dismissKey())) { el.classList.add('hidden'); el.replaceChildren(); return; }
+  if (isSetupDismissed()) { el.classList.add('hidden'); el.replaceChildren(); return; }
   // Re-check hours so hours-tab saves (which don't always reloadContext) stay accurate.
   if (ctx.staff) {
     const ids = ctx.staff.map((s) => s.id);
@@ -47,19 +69,13 @@ export async function refreshSetupBanner() {
       ? (await q(sb.from('working_hours').select('id').in('staff_id', ids).limit(1))).length > 0
       : false;
   }
-  const steps = [
-    { ok: ctx.staff.some((s) => s.is_active), tab: 'staff', label: 'צוות' },
-    { ok: ctx.hasHours, tab: 'hours', label: 'שעות' },
-    { ok: ctx.services.some((s) => s.is_active), tab: 'services', label: 'שירות' },
-    { ok: !!ctx.business.public_slug, tab: 'settings', label: 'שיתוף קישור' },
-  ];
+  const steps = getSetupSteps();
   if (steps.every((s) => s.ok)) { el.classList.add('hidden'); el.replaceChildren(); return; }
-  const links = steps.map((s, i) => {
-    const n = `${i + 1} ${s.label}`;
-    return s.ok
-      ? h('span', { class: 'setup-done' }, n)
-      : h('button', { type: 'button', class: 'setup-link', 'data-tab': s.tab }, n);
-  });
+  // On calendar tab the rich B5 card is shown instead — keep banner collapsed.
+  if (current === 'calendar') { el.classList.add('hidden'); el.replaceChildren(); return; }
+  const links = steps.map((s) => (s.ok
+    ? h('span', { class: 'setup-done' }, `✓ ${s.label}`)
+    : h('button', { type: 'button', class: 'setup-link', 'data-tab': s.tab }, `○ ${s.label}`)));
   el.replaceChildren(
     h('div', { class: 'setup-inner' },
       h('p', {}, 'השלימו את ההגדרה: ', ...links.reduce((a, node, i) => {
@@ -70,10 +86,7 @@ export async function refreshSetupBanner() {
       h('button', { type: 'button', class: 'btn small ghost setup-dismiss', 'aria-label': 'סגירה' }, '✕')));
   el.classList.remove('hidden');
   el.querySelectorAll('.setup-link').forEach((btn) => btn.addEventListener('click', () => openTab(btn.dataset.tab)));
-  el.querySelector('.setup-dismiss')?.addEventListener('click', () => {
-    localStorage.setItem(dismissKey(), '1');
-    el.classList.add('hidden'); el.replaceChildren();
-  });
+  el.querySelector('.setup-dismiss')?.addEventListener('click', () => dismissSetup());
 }
 
 // ---------- login ----------
@@ -134,6 +147,7 @@ export async function openTab(name) {
   show(name);
   const root = $('#view-' + name);
   try { await TABS[name](root, ctx); } catch (e) { root.replaceChildren(Object.assign(document.createElement('div'), { className: 'card', textContent: heError(e) })); }
+  await refreshSetupBanner();
   refreshTabsOverflow();
 }
 $('#tabs').addEventListener('click', (e) => { const t = e.target.closest('[data-tab]'); if (t) openTab(t.dataset.tab); });

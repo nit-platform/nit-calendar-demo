@@ -66,6 +66,17 @@ export async function renderHours(root, ctx) {
   const rerender = () => renderHours(root, ctx);
   const allIds = ctx.staff.map((s) => s.id);
 
+  const emptyHours = !wh.length
+    ? h('div', { class: 'card empty-tab-cta', id: 'empty-hours-cta' },
+        h('p', {}, 'עדיין אין שעות עבודה.'),
+        h('p', { class: 'muted' }, 'בחרו תבנית מהירה למטה — או הוסיפו טווח ידנית ליום.'),
+        h('div', { class: 'actions' },
+          h('button', {
+            type: 'button', class: 'btn primary',
+            onclick: () => document.getElementById('tpl-weekdays')?.click(),
+          }, 'ימי חול 09:00–17:00')))
+    : null;
+
   const templates = h('div', { class: 'card', id: 'hours-templates' },
     h('h2', {}, 'תבניות מהירות'),
     h('p', { class: 'muted' }, 'לחיצה מחליפה את השעות ליום/לימים שנבחרו. אפשר להחיל על כל הצוות.'),
@@ -128,6 +139,7 @@ export async function renderHours(root, ctx) {
   root.replaceChildren(
     h('div', { class: 'card toolbar' }, h('label', { style: 'flex:1' }, providerLabel(ctx.business), h('select', { id: 'hours-staff', onchange: (e) => { staffId = e.target.value; rerender(); } },
       ctx.staff.map((s) => h('option', { value: s.id, selected: s.id === staffId }, s.display_name))))),
+    ...(emptyHours ? [emptyHours] : []),
     templates,
     hoursCard,
     h('div', { class: 'card', id: 'breaks-card' }, h('h2', {}, 'הפסקות קבועות (כל שבוע)'),

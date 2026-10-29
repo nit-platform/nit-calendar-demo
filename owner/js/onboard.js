@@ -212,12 +212,14 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       h('input', { type: 'radio', name: 'who', value: 'team', checked: !state.solo }),
       h('span', {}, h('b', {}, 'יש לי צוות'), h('small', { class: 'muted' }, ' — אוסיף שמות')));
 
+    // B2: default team name even without «רק אני» — user metadata, else business name as typed.
+    const teamInput = h('input', {
+      name: 'display_name', maxlength: '60', autocomplete: 'off',
+      placeholder: 'שם', id: 'onboard-team-name',
+      value: nameFromUser(user, ''),
+    });
     const teamBox = h('div', { class: state.solo ? 'hidden' : '', id: 'onboard-team-box' },
-      h('label', {}, 'שם נותן שירות ראשון',
-        h('input', {
-          name: 'display_name', maxlength: '60', autocomplete: 'off',
-          placeholder: 'שם', id: 'onboard-team-name',
-        })));
+      h('label', {}, 'שם נותן שירות ראשון', teamInput));
 
     const form = h('form', { id: 'onboard-form-1', novalidate: '' },
       h('h3', { class: 'sub', style: 'margin-top:0' }, 'פרטי העסק'),
@@ -240,10 +242,18 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         h('button', { type: 'button', class: 'btn ghost', id: 'onboard-back-1', onclick: () => go(1) }, 'חזרה'),
         h('button', { type: 'submit', class: 'btn primary', id: 'onboard-next-1' }, 'המשיכו — שמירת עסק')));
 
+    let teamTouched = false;
+    teamInput.addEventListener('input', () => { teamTouched = true; });
+    const syncTeamDefault = () => {
+      if (teamTouched) return;
+      teamInput.value = nameFromUser(user, form.name.value);
+    };
+    form.name.addEventListener('input', syncTeamDefault);
     form.querySelectorAll('input[name=who]').forEach((r) => {
       r.addEventListener('change', () => {
         state.solo = form.who.value === 'solo';
         teamBox.classList.toggle('hidden', state.solo);
+        if (!state.solo) syncTeamDefault();
       });
     });
 
@@ -424,7 +434,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       title: 'תצוגה מקדימה של דף ההזמנה',
       loading: 'lazy',
       referrerpolicy: 'no-referrer',
-      sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups',
+      sandbox: 'allow-scripts allow-same-origin allow-forms',
     });
     const frameWrap = h('div', {
       class: 'onboard-preview-frame-wrap' + (href && sameOriginPreview(href) ? '' : ' hidden'),

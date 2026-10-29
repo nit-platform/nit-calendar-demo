@@ -337,7 +337,19 @@ export async function renderServices(root, ctx) {
     q(sb.from('staff_services').select('*').in('service_id', ids)),
     q(sb.from('service_overlap_rules').select('*').in('host_service_id', ids))]) : [[], [], []];
   const rerender = () => renderServices(root, ctx);
+  const empty = !ctx.services.length
+    ? h('div', { class: 'card empty-tab-cta', id: 'empty-services-cta' },
+        h('p', {}, 'עדיין אין שירותים.'),
+        h('p', { class: 'muted' }, 'הוסיפו שירות אחד לפחות כדי שלקוחות יוכלו לקבוע תור.'),
+        h('div', { class: 'actions' },
+          h('button', {
+            type: 'button', class: 'btn primary',
+            onclick: () => document.querySelector('.svc-card summary')?.click?.()
+              || document.querySelector('.svc-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+          }, 'הוספת שירות')))
+    : null;
   root.replaceChildren(
+    ...(empty ? [empty] : []),
     ...ctx.services.map((s) => serviceCard(
       s,
       steps.filter((x) => x.service_id === s.id),

@@ -3,11 +3,78 @@ import { sb, q, rpc, heError, parseRange, hhmm } from './sb.js';
 import { $, h, muted, toast, providerLabel } from '../../js/ui.js';
 import { askDangerConfirm } from './confirm.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, minutesOfDay, hhmmToMin, minToHHMM } from '../../js/time.js';
+import { getSetupSteps, isSetupDismissed, dismissSetup, openTab } from './app.js';
+import { bookingUrl } from './bookinglink.js';
 
 const st = { staffId: null, date: todayISO(), mode: 'day' };
 const PX = 1.6; // px per minute
 const STATUS = { pending: 'ממתין', confirmed: 'מאושר', cancelled: 'בוטל', completed: 'הושלם', no_show: 'לא הגיע' };
 const KIND = { work: 'עבודה', wait: 'המתנה', buffer: 'מרווח' };
+
+
+function emptyCalDismissKey(bizId) { return bizId ? `nit-empty-cal-dismiss:${bizId}` : ''; }
+
+async function copyBookingLink(ctx) {
+  const slug = ctx.business?.public_slug;
+  if (!slug) { openTab('settings'); toast('בחרו מזהה קישור בהגדרות'); return; }
+  const url = bookingUrl(slug);
+  try { await navigator.clipboard.writeText(url); toast('הקישור הועתק — שלחו ללקוח'); }
+  catch { toast('לא ניתן להעתיק', true); }
+}
+
+/** B5: first-run checklist card (calendar tab). */
+function setupChecklistCard(ctx) {
+  if (isSetupDismissed()) return null;
+  const steps = getSetupSteps();
+  if (!steps.length || steps.every((s) => s.ok)) return null;
+  const next = steps.find((s) => !s.ok);
+  const rows = steps.map((s) => h('li', { class: s.ok ? 'setup-check-ok' : 'setup-check-todo' },
+    s.ok ? `✓ ${s.label}` : `○ ${s.label}`,
+    (!s.ok && s.tab === next?.tab)
+      ? h('button', {
+          type: 'button', class: 'btn small primary setup-check-cta',
+          onclick: () => (s.tab === 'settings' && ctx.business.public_slug
+            ? copyBookingLink(ctx)
+            : openTab(s.tab)),
+        }, s.cta || 'המשך')
+      : null));
+  return h('div', { class: 'card setup-check-card', id: 'setup-checklist' },
+    h('h2', {}, 'ברוכים הבאים 👋'),
+    h('p', { class: 'muted' }, 'עוד צעד אחד והלקוחות מתחילים'),
+    h('ul', { class: 'setup-check-list' }, ...rows),
+    h('div', { class: 'actions' },
+      h('button', { type: 'button', class: 'btn ghost', onclick: () => {
+        dismissSetup();
+        const el = document.getElementById('setup-checklist');
+        el?.remove();
+      } }, 'סגירה')));
+}
+
+/** B6: empty-day share CTA until first appointment / dismiss. */
+function emptyDayShareCard(ctx, hasAnyApptToday) {
+  if (hasAnyApptToday) return null;
+  const key = emptyCalDismissKey(ctx.business?.id);
+  if (key && localStorage.getItem(key)) return null;
+  const slug = ctx.business?.public_slug;
+  return h('div', { class: 'card empty-cal-cta', id: 'empty-cal-cta' },
+    h('p', {}, 'עדיין אין תורים להיום.'),
+    h('p', { class: 'muted' }, slug
+      ? 'שלחו את הקישור ללקוח ראשון.'
+      : 'השלימו שיתוף קישור בהגדרות, ואז שלחו ללקוח.'),
+    h('div', { class: 'actions' },
+      h('button', {
+        type: 'button', class: 'btn primary', id: 'empty-cal-copy',
+        onclick: () => copyBookingLink(ctx),
+      }, slug ? 'העתקת קישור הזמנה' : 'מעבר להגדרות קישור'),
+      h('button', {
+        type: 'button', class: 'btn ghost',
+        onclick: () => {
+          if (key) localStorage.setItem(key, '1');
+          document.getElementById('empty-cal-cta')?.remove();
+        },
+      }, 'סגירה')));
+}
+
 
 const weekday = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
 
@@ -112,11 +179,16 @@ async function renderDay(box, ctx, rerender) {
       s.kind === 'buffer' ? '' : `${fmtTime(s.seg_start)} ${a.customer || ''} · ${s.kind === 'wait' ? '⏳ ' : ''}${s.step_name}`));
   }
   const note = info.sd ? h('p', { class: 'day-note' }, `${info.sd.name || ''} ${{ holiday: '(סגור)', closed: '(סגור)', eve: `(עד ${hhmm(info.sd.close_time)})`, special_hours: `(${hhmm(info.sd.open_time)}–${hhmm(info.sd.close_time)})`, open: '(פתוח כרגיל)' }[info.sd.kind]}`) : null;
-  box.replaceChildren(h('div', { class: 'card' },
+  const dayCard = h('div', { class: 'card' },
     h('div', { class: 'day-head' }, h('h2', {}, fmtLongDate(st.date)), h('span', { class: 'muted' }, `${appts.length} תורים`)), note,
     h('p', { class: 'legend' }, h('span', {}, h('span', { class: 'dot work' }), 'עבודה'), h('span', {}, h('span', { class: 'dot wait' }), 'המתנה (זמן מת)'),
       h('span', {}, h('span', { class: 'dot fill' }), 'תור משובץ בהמתנה'), h('span', {}, h('span', { class: 'dot buf' }), 'מרווח')),
-    rows.length || !closedAll ? tl : muted('יום סגור, אין תורים.')));
+    rows.length || !closedAll ? tl : muted('יום סגור, אין תורים.'));
+  const kids = [];
+  const emptyCta = emptyDayShareCard(ctx, appts.length > 0);
+  if (emptyCta) kids.push(emptyCta);
+  kids.push(dayCard);
+  box.replaceChildren(...kids);
 }
 
 async function renderWeek(box, ctx) {
@@ -147,8 +219,8 @@ export async function renderCalendar(root, ctx) {
   const body = h('div', {});
   const rerender = () => renderCalendar(root, ctx);
   const step = st.mode === 'week' ? 7 : 1;
-  root.replaceChildren(
-    h('div', { class: 'card toolbar' },
+  const checklist = setupChecklistCard(ctx);
+  const toolbar = h('div', { class: 'card toolbar' },
       h('select', { id: 'cal-staff', 'aria-label': providerLabel(ctx.business), onchange: (e) => { st.staffId = e.target.value; rerender(); } },
         staff.map((s) => h('option', { value: s.id, selected: s.id === st.staffId }, s.display_name))),
       h('div', { class: 'seg', role: 'group', 'aria-label': 'תצוגה' }, ['day', 'week'].map((m) => h('button', { type: 'button', 'aria-pressed': String(st.mode === m), id: 'mode-' + m,
@@ -157,8 +229,8 @@ export async function renderCalendar(root, ctx) {
         h('button', { class: 'icon-btn', id: 'cal-prev', type: 'button', 'aria-label': st.mode === 'week' ? 'שבוע קודם' : 'יום קודם', onclick: () => { st.date = addDays(st.date, -step); rerender(); } }, '◀'),
         h('input', { type: 'date', id: 'cal-date', value: st.date, 'aria-label': 'תאריך', onchange: (e) => { if (e.target.value) { st.date = e.target.value; rerender(); } } }),
         h('button', { class: 'icon-btn', id: 'cal-next', type: 'button', 'aria-label': st.mode === 'week' ? 'שבוע הבא' : 'יום הבא', onclick: () => { st.date = addDays(st.date, step); rerender(); } }, '▶'),
-        h('button', { class: 'btn small outline', type: 'button', onclick: () => { st.date = todayISO(); rerender(); } }, 'היום'))),
-    body);
+        h('button', { class: 'btn small outline', type: 'button', onclick: () => { st.date = todayISO(); rerender(); } }, 'היום')));
+  root.replaceChildren(...(checklist ? [checklist, toolbar, body] : [toolbar, body]));
   body.append(muted('טוען…'));
   try { await (st.mode === 'week' ? renderWeek(body, ctx) : renderDay(body, ctx, rerender)); }
   catch (e) { body.replaceChildren(h('div', { class: 'card' }, heError(e))); }
