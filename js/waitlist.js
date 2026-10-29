@@ -152,6 +152,7 @@ export function initWaitlist(slug, selection) {
     if (WAITLIST_VIA_FUNCTION && !captcha) { $('#wl-error').textContent = 'נא להשלים את בדיקת האבטחה.'; return; }
     btn.disabled = true; $('#wl-error').textContent = '';
     try {
+      const phone = f.phone.value.trim();
       const res = await api.waitlistJoin({ slug, staffId: sel.staffId, serviceId: sel.serviceId, from: f.from.value, to: f.to.value,
         timeFrom: f.tfrom.value, timeTo: f.tto.value, name, phone, token: getTokens(slug)[0], captcha });
       addToken(slug, res.access_token);
