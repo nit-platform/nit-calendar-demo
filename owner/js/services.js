@@ -5,7 +5,7 @@ import { sb, q, heError } from './sb.js';
 import { $, h, muted, toast, shekel, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 
-const NAME_PLACEHOLDER = 'למשל: ייעוץ / תספורת / טיפול';
+const NAME_PLACEHOLDER = 'למשל: ייעוץ / טיפול / פגישה';
 const WAIT_HELP = 'בזמן הזה אפשר לשבץ שירות קצר אחר, אם סימנתם למטה.';
 
 const num = (v) => (v === '' || v == null ? null : Number(v));

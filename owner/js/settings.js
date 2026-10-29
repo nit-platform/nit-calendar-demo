@@ -71,7 +71,7 @@ export async function renderSettings(root, ctx) {
   const bizForm = h('form', { class: 'card', id: 'biz-form' }, h('h2', {}, 'פרטי העסק'),
     h('div', { class: 'row' }, h('label', {}, 'שם העסק', h('input', { name: 'name', value: b.name, required: true })),
       h('label', {}, 'וואטסאפ', h('input', { name: 'phone_whatsapp', value: b.phone_whatsapp || '', dir: 'ltr', inputmode: 'tel' })),
-      h('label', {}, 'כינוי לנותן שירות (למשל ספר, מטפלת)', h('input', { name: 'provider_label', id: 'provider-label', value: b.provider_label || '',
+      h('label', {}, 'כינוי לנותן שירות (למשל מאמן, מטפל/ת)', h('input', { name: 'provider_label', id: 'provider-label', value: b.provider_label || '',
         maxlength: 30, placeholder: DEFAULT_PROVIDER_LABEL, pattern: '[^<>]*', title: 'עד 30 תווים, ללא < או >' }))),
     // owner-only (DB guard). Off: the booking page shows no names and a free provider is assigned automatically.
     'customers_choose_provider' in b
