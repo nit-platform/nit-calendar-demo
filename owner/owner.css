@@ -82,7 +82,8 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .staff-card summary::-webkit-details-marker{display:none}
 .form-error{color:var(--err);font-size:.88rem;margin:4px 0 0}
 .form-error.hidden{display:none}
-.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:10px}
+/* C4: logical start = inline-start (right in RTL) for action rows */
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:start;margin-top:10px}
 /* K3 nobiz + K1 onboard */
 .nobiz-actions{justify-content:stretch;margin-top:16px}
 #nobiz-hint,.nobiz-hint{color:var(--brand-2,#0b57d0);font-weight:600}
@@ -139,9 +140,9 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .field-error{display:block;margin-top:2px}
 .field-error.hidden{display:none}
 
-/* C4: primary = one main action per card; ghost/outline for secondary */
-.card > .actions .btn.primary{order:2}
-.card > .actions .btn:not(.primary){order:1}
+/* C4: primary first toward inline-start; ghost/outline secondary */
+.card > .actions .btn.primary{order:-1}
+.card > .actions .btn:not(.primary){order:0}
 .otp-hint{margin:0;font-size:.88rem}
 
 /* Staff incomplete for booking page */
@@ -208,8 +209,12 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .empty-cal-cta,.empty-tab-cta{border:1px dashed #c5c5ca;background:#fafafa}
 .empty-cal-cta p,.empty-tab-cta p{margin:0 0 6px}
 
-/* C4: wizard actions pack to inline-start (right in RTL); primary first toward start */
-.onboard .actions{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+/* C4: wizard actions pack to inline-start; primary first toward start */
+.onboard .actions{justify-content:start;flex-wrap:wrap;gap:8px}
 .onboard .actions .btn{order:0}
 .onboard .actions .btn.primary{order:-1}
 .onboard .actions.onboard-share-actions .btn{order:0}
+.onboard-team-list{display:grid;gap:6px;margin-top:4px}
+.onboard-team-row{display:flex;gap:6px;align-items:center}
+.onboard-team-row .onboard-team-name{flex:1 1 auto;min-width:0}
+#onboard-team-add{margin-top:4px;justify-self:start}
