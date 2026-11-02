@@ -219,14 +219,37 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       h('input', { type: 'radio', name: 'who', value: 'team', checked: !state.solo }),
       h('span', {}, h('b', {}, 'יש לי צוות'), h('small', { class: 'muted' }, ' — אוסיף שמות')));
 
-    // B2: default team name even without «רק אני» — user metadata, else business name as typed.
-    const teamInput = h('input', {
-      name: 'display_name', maxlength: '60', autocomplete: 'off',
-      placeholder: 'שם', id: 'onboard-team-name',
-      value: nameFromUser(user, ''),
+    // B2 + K1 team path: default first name; «+ עוד» adds more provider rows.
+    const teamList = h('div', { class: 'onboard-team-list', id: 'onboard-team-list' });
+    const makeTeamRow = (initial = '', { removable = false } = {}) => {
+      const input = h('input', {
+        name: 'display_name', maxlength: '60', autocomplete: 'off',
+        placeholder: 'שם', class: 'onboard-team-name',
+        value: initial,
+      });
+      const row = h('div', { class: 'onboard-team-row' }, input);
+      if (removable) {
+        row.append(h('button', {
+          type: 'button', class: 'btn small ghost onboard-team-remove',
+          'aria-label': 'הסרת שורה',
+          onclick: () => { row.remove(); },
+        }, '✕'));
+      }
+      teamList.append(row);
+      return input;
+    };
+    const firstTeamInput = makeTeamRow(nameFromUser(user, ''), { removable: false });
+    firstTeamInput.id = 'onboard-team-name';
+    const addTeamBtn = h('button', {
+      type: 'button', class: 'btn outline', id: 'onboard-team-add',
+    }, '+ עוד');
+    addTeamBtn.addEventListener('click', () => {
+      const inp = makeTeamRow('', { removable: true });
+      inp.focus();
     });
     const teamBox = h('div', { class: state.solo ? 'hidden' : '', id: 'onboard-team-box' },
-      h('label', {}, 'שם נותן שירות ראשון', teamInput));
+      h('label', {}, 'שמות נותני שירות', teamList),
+      addTeamBtn);
 
     const form = h('form', { id: 'onboard-form-1', novalidate: '' },
       h('h3', { class: 'sub', style: 'margin-top:0' }, 'פרטי העסק'),
@@ -250,10 +273,10 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         h('button', { type: 'submit', class: 'btn primary', id: 'onboard-next-1' }, 'המשיכו — שמירת עסק')));
 
     let teamTouched = false;
-    teamInput.addEventListener('input', () => { teamTouched = true; });
+    firstTeamInput.addEventListener('input', () => { teamTouched = true; });
     const syncTeamDefault = () => {
       if (teamTouched) return;
-      teamInput.value = nameFromUser(user, form.name.value);
+      firstTeamInput.value = nameFromUser(user, form.name.value);
     };
     form.name.addEventListener('input', syncTeamDefault);
     form.querySelectorAll('input[name=who]').forEach((r) => {
@@ -277,17 +300,25 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       if (label === DEFAULT_PROVIDER_LABEL) label = null;
 
       state.solo = form.who.value === 'solo';
-      let teamName = null;
+      let teamNames = [];
       if (!state.solo) {
-        teamName = form.display_name.value.trim();
-        if (teamName.length < 2 || teamName.length > 60 || /[<>]/.test(teamName)) {
-          showErr(form, 'השם חייב להיות בין 2 ל-60 תווים, ללא < או >.');
-          form.display_name.focus(); return;
+        teamNames = [...form.querySelectorAll('#onboard-team-list .onboard-team-name')]
+          .map((el) => el.value.trim()).filter(Boolean);
+        if (!teamNames.length) {
+          showErr(form, 'הוסיפו לפחות שם אחד לנותן שירות.');
+          firstTeamInput.focus(); return;
+        }
+        for (const teamName of teamNames) {
+          if (teamName.length < 2 || teamName.length > 60 || /[<>]/.test(teamName)) {
+            showErr(form, 'כל שם חייב להיות בין 2 ל-60 תווים, ללא < או >.');
+            firstTeamInput.focus(); return;
+          }
         }
       }
 
       const phone = form.phone.value.trim() || null;
-      const choose = !state.solo; // solo → customers don't choose; team → choose by default
+      // solo → customers don't choose; team (1+) → choose by default
+      const choose = !state.solo;
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       try {
         const row = await rpc('owner_create_business', {
@@ -299,11 +330,15 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         });
         state.business = row;
 
-        const staffName = state.solo ? nameFromUser(user, name) : teamName;
-        const [st] = await q(sb.from('staff').insert({
-          business_id: row.id, display_name: staffName, role: 'provider', is_active: true,
-        }).select('*'));
-        state.staff = [st];
+        const namesToInsert = state.solo ? [nameFromUser(user, name)] : teamNames;
+        const staffRows = [];
+        for (const display_name of namesToInsert) {
+          const [st] = await q(sb.from('staff').insert({
+            business_id: row.id, display_name, role: 'provider', is_active: true,
+          }).select('*'));
+          staffRows.push(st);
+        }
+        state.staff = staffRows;
 
         await applyTemplateHours(state.staff, tpl.hours);
         state.hoursApplied = true;
@@ -525,7 +560,11 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       try {
         const res = await rpc('owner_slug_available', { p_slug: slug, p_business_id: b.id });
         if (res === 'available') {
-          status.textContent = 'פנוי · שינוי ישבור קישורים ישנים';
+          // B4: scare only when replacing an already-custom (non auto b-*) slug.
+          const customOld = liveSlug && !/^b-[a-f0-9]{12}$/.test(liveSlug);
+          status.textContent = customOld
+            ? 'פנוי · שינוי ישבור קישורים ישנים'
+            : 'פנוי';
           status.className = 'muted ok';
           return true;
         }
@@ -572,7 +611,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     });
 
     const skipSlug = h('button', {
-      type: 'button', class: 'btn ghost', id: 'onboard-skip-slug',
+      type: 'button', class: 'btn outline', id: 'onboard-skip-slug',
     }, 'להשאיר אוטומטי');
     skipSlug.addEventListener('click', () => {
       if (liveSlug) {
