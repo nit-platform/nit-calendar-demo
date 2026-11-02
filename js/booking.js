@@ -11,7 +11,7 @@ import * as auth from './auth.js';
 import { setWelcomeSkip } from './welcome.js';
 import { initBookCaptcha, bookCaptchaToken, resetBookCaptcha } from './book-captcha.js';
 
-const state = { scope: null, barber: null, services: [], serviceId: null, date: todayISO(), pending: null };
+const state = { scope: null, provider: null, services: [], serviceId: null, date: todayISO(), pending: null };
 const HOLD_KEY = 'nit-pending-hold';
 
 function savePendingHold(payload) {
@@ -27,9 +27,9 @@ function clearPendingHold() {
   try { sessionStorage.removeItem(HOLD_KEY); } catch { /* ignore */ }
 }
 
-export async function initBooking({ scope, barber }) {
-  state.scope = scope; state.barber = barber;
-  if (barber) loadServices();
+export async function initBooking({ scope, provider }) {
+  state.scope = scope; state.provider = provider;
+  if (provider) loadServices();
   const di = $('#date-input');
   di.min = todayISO(); di.max = addDays(todayISO(), DAYS_AHEAD); di.value = state.date;
   const onDateInput = () => {
@@ -63,12 +63,12 @@ export async function initBooking({ scope, barber }) {
 export function selection() {
   const svc = state.services.find((s) => s.service_id === state.serviceId);
   return { staffId: state.scope?.staffId ?? null, serviceId: state.serviceId, date: state.date,
-           label: svc ? `${svc.name}${state.barber?.display_name ? ` אצל ${state.barber.display_name}` : ''}` : '' };
+           label: svc ? `${svc.name}${state.provider?.display_name ? ` אצל ${state.provider.display_name}` : ''}` : '' };
 }
 
 /** Business link: switch to another provider of the same business. */
-export function selectStaff(staffId, barber) {
-  state.scope = { ...state.scope, staffId }; state.barber = barber;
+export function selectStaff(staffId, provider) {
+  state.scope = { ...state.scope, staffId }; state.provider = provider;
   state.serviceId = null; state.services = []; slotReq++;
   $('#slots').replaceChildren(muted('בחרו שירות ותאריך'));
   loadServices();
@@ -92,7 +92,7 @@ const priceText = (s) => (s.price_varies ? `החל מ-${shekel(s.price)}` : shek
 function renderServices() {
   const box = $('#service-list');
   if (!state.services.length) {
-    box.replaceChildren(muted(state.barber.display_name ? `ל${providerLabel(state.barber)} זה אין שירותים` : 'אין כרגע שירותים זמינים'));
+    box.replaceChildren(muted(state.provider.display_name ? `ל${providerLabel(state.provider)} זה אין שירותים` : 'אין כרגע שירותים זמינים'));
     return;
   }
   box.replaceChildren(...state.services.map((s) =>
@@ -148,7 +148,7 @@ function renderDateStrip() {
 let slotReq = 0;
 export async function loadSlots() {
   const box = $('#slots');
-  if (!state.serviceId || !state.barber) return;
+  if (!state.serviceId || !state.provider) return;
   const my = ++slotReq;
   box.replaceChildren(muted('טוען שעות…'));
   try {
@@ -189,8 +189,8 @@ async function openDialog(slot) {
   // Customer duration excludes buffer_after (included in slot_end for scheduling only).
   const endTs = customerSlotEnd(slot.slot_start, svc.total_duration_min);
   const summaryKids = [
-    state.barber.display_name
-      ? h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.barber.display_name))
+    state.provider.display_name
+      ? h('div', {}, h('b', {}, svc.name), ' אצל ', h('b', {}, state.provider.display_name))
       : h('div', {}, h('b', {}, svc.name)),
     h('div', {}, `${fmtLongDate(state.date)}, `, h('bdi', { dir: 'ltr' }, `${fmtTime(slot.slot_start)}–${fmtTime(endTs)}`),
       ` · ${svc.total_duration_min} דק׳`),

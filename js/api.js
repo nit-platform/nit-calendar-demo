@@ -92,7 +92,8 @@ async function viaFunction(name, body) {
 // The server re-checks that staffId belongs to that business; nothing else is reachable.
 export const api = {
   // Skip RPC when slug is empty/null — avoids PostgREST 404 console noise on root/?b=.
-  barber: async (slug) => {
+  // Legacy per-provider demo link (DB RPC remains demo_barber).
+  provider: async (slug) => {
     if (!slug) return null;
     return (await rpc('demo_barber', { p_slug: slug }))[0] ?? null;
   },

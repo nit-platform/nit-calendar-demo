@@ -23,7 +23,7 @@ export function hideWelcome() {
   if (releaseTrap) { releaseTrap(); releaseTrap = null; }
   if (overlay) overlay.classList.add('hidden');
   document.body.classList.remove('welcome-open');
-  const restore = $('#auth-google') || $('#service-list') || $('#business-title') || $('#barber-title');
+  const restore = $('#auth-google') || $('#service-list') || $('#business-title');
   if (restore && typeof restore.focus === 'function') {
     try {
       if (!restore.hasAttribute('tabindex') && restore.id !== 'auth-google') restore.setAttribute('tabindex', '-1');
