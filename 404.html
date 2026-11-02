@@ -1,8 +1,10 @@
 <!doctype html>
 <html lang="he" dir="rtl"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-BXE5KFsgJVsari9rGz201FxZ2Z648DUGX9s+nBWOETU='; style-src 'sha256-RUdbR+uHgDJyySQ3L0sJ9U5wz/S65BtpAizAs/IWFII='; object-src 'none'; base-uri 'none'; form-action 'none'"><title>NIT</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-z8eN/74EZb+Sk+1OvFUK0OU7kEZgpssjNqMxvQHYeRE='; style-src 'sha256-RUdbR+uHgDJyySQ3L0sJ9U5wz/S65BtpAizAs/IWFII='; object-src 'none'; base-uri 'none'; form-action 'none'"><title>NIT</title>
 <script>
-  // GitHub Pages SPA trick: /<base>/b/<slug> has no file, so Pages serves this 404.html.
+  // GitHub Pages SPA trick: /<base>/b/<slug> has no file, so Pages serves this 404.html (HTTP 404).
+  // That status is expected and harmless: the body still runs and redirects. A static /b/<slug>/
+  // folder cannot cover dynamic business slugs; owner/share links already use ?b=<slug> (HTTP 200).
   // Redirect to /<base>/?b=<slug>…; preserve OAuth ?code=/state (and hash tokens) so supabase-js can exchange.
   (function () {
     var p = location.pathname, i = p.indexOf('/b/');
