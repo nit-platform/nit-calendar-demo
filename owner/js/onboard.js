@@ -84,6 +84,34 @@ function hoursLabel(tpl) {
   return s;
 }
 
+/** Collapse internal whitespace runs (matches server normalize). */
+function collapseWs(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ');
+}
+
+const ONBOARD_IDEM_KEY = 'nit-onboard-idempotency';
+
+function getOrCreateIdempotencyKey() {
+  try {
+    const existing = sessionStorage.getItem(ONBOARD_IDEM_KEY);
+    if (existing && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existing)) {
+      return existing;
+    }
+  } catch { /* private mode */ }
+  const key = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  try { sessionStorage.setItem(ONBOARD_IDEM_KEY, key); } catch { /* ignore */ }
+  return key;
+}
+
+function clearIdempotencyKey() {
+  try { sessionStorage.removeItem(ONBOARD_IDEM_KEY); } catch { /* ignore */ }
+}
+
 async function applyTemplateHours(staff, hours) {
   if (!staff?.length || !hours?.weekdays) return;
   const rows = [];
@@ -101,7 +129,13 @@ async function applyTemplateHours(staff, hours) {
       });
     }
   }
-  if (rows.length) await q(sb.from('working_hours').insert(rows).select('id'));
+  if (rows.length) {
+    // Upsert against working_hours_staff_weekday_range_uq — retries must not duplicate.
+    await q(sb.from('working_hours').upsert(rows, {
+      onConflict: 'staff_id,weekday,start_time,end_time',
+      ignoreDuplicates: true,
+    }).select('id'));
+  }
 }
 
 /** @param {(biz: object) => void|Promise<void>} onDone @param {() => void} onCancel */
@@ -115,6 +149,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     service: null,
     hoursApplied: false,
     solo: true,
+    idempotencyKey: getOrCreateIdempotencyKey(),
   };
 
   const go = async (n) => { state.step = n; await paint(); };
@@ -155,7 +190,10 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     return h('div', { class: 'onboard', id: 'view-onboard-inner' },
       h('div', { class: 'onboard-top' },
         h('h2', {}, 'הקמת העסק'),
-        h('button', { type: 'button', class: 'btn link onboard-exit', onclick: () => onCancel?.() },
+        h('button', { type: 'button', class: 'btn link onboard-exit', onclick: () => {
+          clearIdempotencyKey();
+          onCancel?.();
+        } },
           state.business ? 'המשך אחר כך' : 'ביטול')),
       progressBar(),
       card);
@@ -322,7 +360,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         }
         const seen = new Set();
         for (const el of teamInputs) {
-          const teamName = el.value.trim();
+          const teamName = collapseWs(el.value);
           if (!teamName) continue;
           if (teamName.length < 2 || teamName.length > 60 || /[<>]/.test(teamName)) {
             showErr(form, 'כל שם חייב להיות בין 2 ל-60 תווים, ללא < או >.');
@@ -357,12 +395,16 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
           p_public_slug: null,
           p_staff_names: namesToInsert,
           p_existing_business_id: state.business?.id || null,
+          p_idempotency_key: state.idempotencyKey || null,
         });
         state.business = row;
         state.staff = Array.isArray(row.staff) ? row.staff : [];
 
-        await applyTemplateHours(state.staff, tpl.hours);
-        state.hoursApplied = true;
+        // hoursApplied was set but never checked — retries duplicated working_hours rows.
+        if (!state.hoursApplied) {
+          await applyTemplateHours(state.staff, tpl.hours);
+          state.hoursApplied = true;
+        }
 
         toast('העסק נוצר — אפשר להמשיך או לחזור אחר כך');
         await go(3);
@@ -666,8 +708,10 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       h('div', { class: 'actions' }, toCal));
 
     toCal.addEventListener('click', async () => {
-      try { await onDone?.(state.business); }
-      catch (err) { showErr(box, heError(err)); }
+      try {
+        clearIdempotencyKey();
+        await onDone?.(state.business);
+      } catch (err) { showErr(box, heError(err)); }
     });
     return [box];
   }
