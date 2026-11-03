@@ -85,10 +85,17 @@ export async function initBooking({ scope, provider }) {
   };
   di.addEventListener('change', onDateInput);
   di.addEventListener('input', onDateInput);
-  $('#date-prev').addEventListener('click', () => setDate(addDays(state.date, -1)));
-  $('#date-next').addEventListener('click', () => setDate(addDays(state.date, 1)));
+  $('#date-prev').addEventListener('click', () => {
+    if ($('#date-prev').disabled || $('#date-prev').getAttribute('aria-disabled') === 'true') return;
+    setDate(addDays(state.date, -1));
+  });
+  $('#date-next').addEventListener('click', () => {
+    if ($('#date-next').disabled || $('#date-next').getAttribute('aria-disabled') === 'true') return;
+    setDate(addDays(state.date, 1));
+  });
   wireDateStripScroll();
   renderDateStrip();
+  syncDateNavBounds();
   $('#book-cancel').addEventListener('click', () => $('#book-dialog').close());
   $('#book-form').addEventListener('submit', submitBooking);
   // After Google OAuth return: finish held booking if any.
@@ -167,10 +174,26 @@ function renderServices() {
   }
 }
 
+/** Disable ◀/▶ at the ends of the bookable range (aria-disabled + disabled). */
+function syncDateNavBounds() {
+  const min = todayISO(), max = addDays(min, DAYS_AHEAD);
+  const prev = $('#date-prev'), next = $('#date-next');
+  if (prev) {
+    const atStart = state.date <= min;
+    prev.disabled = atStart;
+    prev.setAttribute('aria-disabled', String(atStart));
+  }
+  if (next) {
+    const atEnd = state.date >= max;
+    next.disabled = atEnd;
+    next.setAttribute('aria-disabled', String(atEnd));
+  }
+}
+
 function setDate(iso) {
   const min = todayISO(), max = addDays(min, DAYS_AHEAD);
   if (iso < min || iso > max) return;
-  state.date = iso; $('#date-input').value = iso; renderDateStrip(); loadSlots();
+  state.date = iso; $('#date-input').value = iso; renderDateStrip(); syncDateNavBounds(); loadSlots();
 }
 
 /** Customer-facing end = start + service duration (excludes buffer_after / layout buffer step). */
