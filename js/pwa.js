@@ -6,8 +6,8 @@ function isOwnerPath() {
   return /\/owner(?:\/|$)/.test(location.pathname);
 }
 
+/** Absolute URL of the directory that contains index.html (app base / SW scope). */
 function siteRootUrl() {
-  // Document directory for customer; parent of /owner/ for dashboard.
   const here = new URL('.', location.href);
   if (isOwnerPath()) return new URL('../', here);
   return here;
@@ -21,10 +21,32 @@ function iconList(root) {
   ];
 }
 
-/** Build a blob manifest so start_url keeps ?b=<slug> when installed from a business link. */
+/** Slug from arg, ?b=, or /b/<slug> path (after canonicalize). */
+function resolveSlug(slug) {
+  if (slug) return String(slug).toLowerCase();
+  const q = new URLSearchParams(location.search).get('b');
+  if (q) {
+    try { return decodeURIComponent(q).toLowerCase(); } catch { return q.toLowerCase(); }
+  }
+  const m = location.pathname.match(/\/b\/([^/?#]+)\/?$/);
+  if (m) {
+    try { return decodeURIComponent(m[1]).toLowerCase(); } catch { return m[1].toLowerCase(); }
+  }
+  return null;
+}
+
+/**
+ * Build a blob manifest with absolute start_url/scope/id/icons.
+ * Relative paths inside blob: URLs are invalid and break after replaceState to /b/<slug>.
+ */
 export function applyManifest({ slug } = {}) {
   const owner = isOwnerPath();
   const root = siteRootUrl();
+  const base = root.href; // e.g. https://…/nit-calendar-demo/
+  const s = resolveSlug(slug);
+  const startUrl = owner
+    ? new URL('owner/', root).href
+    : (s ? `${base}?b=${encodeURIComponent(s)}` : base);
   const manifest = {
     name: owner ? 'NIT ניהול' : 'NIT יומן',
     short_name: 'NIT',
@@ -35,10 +57,9 @@ export function applyManifest({ slug } = {}) {
     orientation: 'any',
     background_color: BG,
     theme_color: THEME,
-    // Relative to the page URL (blob manifests resolve against the document).
-    start_url: owner ? './' : (slug ? `./?b=${encodeURIComponent(slug)}` : './'),
-    scope: './',
-    id: owner ? './owner/' : './',
+    start_url: startUrl,
+    scope: base,
+    id: startUrl,
     icons: iconList(root),
   };
 
