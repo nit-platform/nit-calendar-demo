@@ -1,5 +1,5 @@
 /* NIT PWA service worker — same-origin app shell only. Never caches APIs/auth/cross-origin. */
-const CACHE = 'nit-shell-v1';
+const CACHE = 'nit-shell-v2';
 const PRECACHE = [
   './',
   './index.html',
@@ -96,10 +96,15 @@ async function networkFirstHtml(request) {
     }
     return fresh;
   } catch (_) {
+    // HTML network failure (navigations): always serve the friendly offline page,
+    // never a stale index.html that would resolve /b/<slug> as "business not found".
+    const offlineUrl = new URL('offline.html', self.registration.scope).href;
+    const offline = await cache.match('./offline.html')
+      || await cache.match(offlineUrl)
+      || await cache.match('offline.html');
+    if (offline) return offline;
     const cached = await cache.match(request) || await cache.match('./index.html') || await cache.match('./');
     if (cached) return cached;
-    const offline = await cache.match('./offline.html');
-    if (offline) return offline;
     return new Response('Offline', { status: 503, statusText: 'Offline', headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   }
 }
