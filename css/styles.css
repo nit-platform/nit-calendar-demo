@@ -23,6 +23,7 @@ main{max-width:760px;margin:0 auto;padding:12px}
 .date-row{display:flex;gap:6px;align-items:center}
 .date-row input{flex:1;font:inherit;padding:9px;border:1.5px solid #d7d7dc;border-radius:10px;min-width:0}
 .icon-btn{font:inherit;font-size:1.15rem;width:44px;height:44px;border-radius:10px;border:1.5px solid #d7d7dc;background:#fff;cursor:pointer}
+.icon-btn:disabled,.icon-btn[aria-disabled="true"]{opacity:.35;cursor:default}
 .date-strip-wrap{position:relative;display:flex;align-items:center;gap:4px;margin-top:10px}
 .date-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 4px;scrollbar-width:none;flex:1;min-width:0;
   mask-image:linear-gradient(to left,transparent,#000 16px,#000 calc(100% - 16px),transparent);
