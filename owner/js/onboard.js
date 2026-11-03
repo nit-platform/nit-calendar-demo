@@ -5,6 +5,7 @@ import { h, toast, providerLabel, DEFAULT_PROVIDER_LABEL } from '../../js/ui.js'
 import { SLUG_RE, RESERVED, slugError, bookingUrl } from './bookinglink.js';
 
 const NAME_MIN = 2, NAME_MAX = 80;
+const STAFF_MAX = 10;
 const TOTAL = 4;
 
 /** Generic business-type templates (no «ספר» / «תספורת»). Hours: weekday 0=Sun … 5=Fri. */
@@ -243,10 +244,22 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
     const addTeamBtn = h('button', {
       type: 'button', class: 'btn outline', id: 'onboard-team-add',
     }, '+ עוד');
+    const syncAddBtn = () => {
+      const n = teamList.querySelectorAll('.onboard-team-name').length;
+      addTeamBtn.disabled = n >= STAFF_MAX;
+      addTeamBtn.title = n >= STAFF_MAX ? `עד ${STAFF_MAX} נותני שירות` : '';
+    };
     addTeamBtn.addEventListener('click', () => {
+      if (teamList.querySelectorAll('.onboard-team-name').length >= STAFF_MAX) return;
       const inp = makeTeamRow('', { removable: true });
+      syncAddBtn();
       inp.focus();
     });
+    // Keep cap in sync when rows are removed.
+    teamList.addEventListener('click', (ev) => {
+      if (ev.target.closest('.onboard-team-remove')) queueMicrotask(syncAddBtn);
+    });
+    syncAddBtn();
     const teamBox = h('div', { class: state.solo ? 'hidden' : '', id: 'onboard-team-box' },
       h('label', {}, 'שמות נותני שירות', teamList),
       addTeamBtn);
@@ -269,8 +282,8 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         h('legend', {}, 'מי מקבל תורים?'), soloRadio, teamRadio, teamBox),
       errBox(),
       h('div', { class: 'actions' },
-        h('button', { type: 'button', class: 'btn ghost', id: 'onboard-back-1', onclick: () => go(1) }, 'חזרה'),
-        h('button', { type: 'submit', class: 'btn primary', id: 'onboard-next-1' }, 'המשיכו — שמירת עסק')));
+        h('button', { type: 'submit', class: 'btn primary', id: 'onboard-next-1' }, 'המשיכו — שמירת עסק'),
+        h('button', { type: 'button', class: 'btn ghost', id: 'onboard-back-1', onclick: () => go(1) }, 'חזרה')));
 
     let teamTouched = false;
     firstTeamInput.addEventListener('input', () => { teamTouched = true; });
@@ -300,45 +313,53 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       if (label === DEFAULT_PROVIDER_LABEL) label = null;
 
       state.solo = form.who.value === 'solo';
+      const teamInputs = [...form.querySelectorAll('#onboard-team-list .onboard-team-name')];
       let teamNames = [];
       if (!state.solo) {
-        teamNames = [...form.querySelectorAll('#onboard-team-list .onboard-team-name')]
-          .map((el) => el.value.trim()).filter(Boolean);
-        if (!teamNames.length) {
-          showErr(form, 'הוסיפו לפחות שם אחד לנותן שירות.');
-          firstTeamInput.focus(); return;
+        if (teamInputs.length > STAFF_MAX) {
+          showErr(form, `אפשר עד ${STAFF_MAX} נותני שירות.`);
+          teamInputs[STAFF_MAX]?.focus(); return;
         }
-        for (const teamName of teamNames) {
+        const seen = new Set();
+        for (const el of teamInputs) {
+          const teamName = el.value.trim();
+          if (!teamName) continue;
           if (teamName.length < 2 || teamName.length > 60 || /[<>]/.test(teamName)) {
             showErr(form, 'כל שם חייב להיות בין 2 ל-60 תווים, ללא < או >.');
-            firstTeamInput.focus(); return;
+            el.focus(); return;
           }
+          const key = teamName.toLocaleLowerCase('he');
+          if (seen.has(key)) {
+            showErr(form, 'שמות נותני השירות חייבים להיות ייחודיים (בלי התחשבות ברישיות או רווחים).');
+            el.focus(); return;
+          }
+          seen.add(key);
+          teamNames.push(teamName);
+        }
+        if (!teamNames.length) {
+          showErr(form, 'הוסיפו לפחות שם אחד לנותן שירות.');
+          (teamInputs[0] || firstTeamInput).focus(); return;
         }
       }
 
       const phone = form.phone.value.trim() || null;
       // solo → customers don't choose; team (1+) → choose by default
       const choose = !state.solo;
+      const namesToInsert = state.solo ? [nameFromUser(user, name)] : teamNames;
       const btn = form.querySelector('[type=submit]'); btn.disabled = true;
       try {
-        const row = await rpc('owner_create_business', {
+        // Atomic create+staff (or idempotent retry reusing state.business).
+        const row = await rpc('owner_onboard_business_and_staff', {
           p_name: name,
           p_provider_label: label,
           p_phone_whatsapp: phone,
           p_customers_choose_provider: choose,
           p_public_slug: null,
+          p_staff_names: namesToInsert,
+          p_existing_business_id: state.business?.id || null,
         });
         state.business = row;
-
-        const namesToInsert = state.solo ? [nameFromUser(user, name)] : teamNames;
-        const staffRows = [];
-        for (const display_name of namesToInsert) {
-          const [st] = await q(sb.from('staff').insert({
-            business_id: row.id, display_name, role: 'provider', is_active: true,
-          }).select('*'));
-          staffRows.push(st);
-        }
-        state.staff = staffRows;
+        state.staff = Array.isArray(row.staff) ? row.staff : [];
 
         await applyTemplateHours(state.staff, tpl.hours);
         state.hoursApplied = true;
@@ -387,8 +408,8 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       advanced,
       errBox(),
       h('div', { class: 'actions' },
-        h('button', { type: 'button', class: 'btn ghost', id: 'onboard-skip-svc' }, 'דילוג'),
-        h('button', { type: 'submit', class: 'btn primary' }, 'שמירה והמשך')));
+        h('button', { type: 'submit', class: 'btn primary' }, 'שמירה והמשך'),
+        h('button', { type: 'button', class: 'btn ghost', id: 'onboard-skip-svc' }, 'דילוג')));
 
     form.querySelector('#onboard-skip-svc').addEventListener('click', () => go(4));
     form.addEventListener('submit', async (e) => {
