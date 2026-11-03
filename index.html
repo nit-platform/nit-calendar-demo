@@ -38,11 +38,15 @@
       <p class="muted">הקישור לא תקין או שהעסק לא קיים. לכל עסק יש קישור הזמנה אישי (למשל <bdi dir="ltr">…/?b=my-business</bdi>). בקשו מהעסק את הקישור שלו.</p></div></section>
     <section id="view-book" class="view" aria-label="קביעת תור">
       <ol class="steps">
+        <li class="card hidden" id="quick-slot-step">
+          <h2>⚡ השעה הפנויה הקרובה</h2>
+          <div id="quick-slot-body"><p class="muted">בודקים זמינות…</p></div>
+        </li>
         <li class="card hidden" id="staff-step">
           <h2><span id="staff-label">בחירת נותן שירות</span></h2>
           <div id="staff-list" class="services"></div>
         </li>
-        <li class="card">
+        <li class="card" id="service-step">
           <h2><span class="num">1</span> בחירת שירות</h2>
           <div id="service-list" class="services"><p class="muted">טוען…</p></div>
         </li>
@@ -61,8 +65,7 @@
         </li>
         <li class="card">
           <h2><span class="num">3</span> בחירת שעה</h2>
-          <p class="legend"><span class="dot fill"></span> ⭐ מומלץ — בזמן המתנה
-            <span class="dot busy"></span> תפוס</p>
+          <p class="legend"><span class="dot fill"></span> ⭐ מומלץ — בזמן המתנה · מוצגות רק שעות פנויות</p>
           <div id="slots" aria-live="polite"><p class="muted">בחרו שירות ותאריך</p></div>
         </li>
         <li class="card hidden" id="waitlist-step">
@@ -95,8 +98,12 @@
     <form id="book-form" method="dialog" novalidate="">
       <h2 id="book-dialog-title">אישור תור</h2>
       <div id="book-summary" class="summary"></div>
-      <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
-      <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="(?:05[0-9\-\s]{8,12}|\+9725[0-9\-\s]{8,12}|9725[0-9\-\s]{8,12})" dir="ltr"></label>
+      <div id="book-remembered" class="remembered hidden" aria-live="polite"></div>
+      <div id="book-contact-fields">
+        <label>שם מלא <input name="name" required minlength="2" maxlength="60" autocomplete="name"></label>
+        <label>טלפון נייד <input name="phone" required inputmode="tel" autocomplete="tel" placeholder="050-1234567" pattern="(?:05[0-9\-\s]{8,12}|\+9725[0-9\-\s]{8,12}|9725[0-9\-\s]{8,12})" dir="ltr"></label>
+        <label class="remember-opt"><input type="checkbox" name="remember" id="book-remember" value="1"> זכרו שם וטלפון במכשיר זה</label>
+      </div>
       <p id="book-auth-note" class="muted small hidden">מחובר עם Google — התור יישמר כמאומת.</p>
       <p id="book-hold-note" class="muted small hidden">השעה תישמר לכמה דקות בזמן ההתחברות עם Google.</p>
       <div id="book-captcha" class="captcha hidden" aria-label="בדיקת אבטחה"></div>
