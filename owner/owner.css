@@ -209,10 +209,9 @@ h3.sub{font-size:.95rem;margin:12px 0 6px}
 .empty-cal-cta,.empty-tab-cta{border:1px dashed #c5c5ca;background:#fafafa}
 .empty-cal-cta p,.empty-tab-cta p{margin:0 0 6px}
 
-/* C4: wizard actions pack to inline-start; primary first toward start */
+/* C4: wizard actions pack to inline-start; primary first in DOM (Tab = visual) */
 .onboard .actions{justify-content:start;flex-wrap:wrap;gap:8px}
 .onboard .actions .btn{order:0}
-.onboard .actions .btn.primary{order:-1}
 .onboard .actions.onboard-share-actions .btn{order:0}
 .onboard-team-list{display:grid;gap:6px;margin-top:4px}
 .onboard-team-row{display:flex;gap:6px;align-items:center}
