@@ -210,20 +210,30 @@ async function startBusiness(slug, biz, explicit) {
     return initBooking({ scope: { kind: 'biz', slug, staffId: null },
                          provider: { display_name: null, business_name: biz.business_name, provider_label: biz.provider_label } });
   }
-  step.classList.remove('hidden');
   show('book');
-  if (!staff.length) { list.replaceChildren(muted('אין כרגע נותני שירות זמינים')); $('#service-list').replaceChildren(muted('—'));
-    return initBooking({ scope: { kind: 'biz', slug, staffId: null }, provider: null }); }
+  if (!staff.length) {
+    step.classList.remove('hidden');
+    list.replaceChildren(muted('אין כרגע נותני שירות זמינים'));
+    $('#service-list').replaceChildren(muted('—'));
+    return initBooking({ scope: { kind: 'biz', slug, staffId: null }, provider: null });
+  }
+  // K3: single provider — silent select + hide picker (same as customers_choose_provider=false UI).
+  if (staff.length === 1) {
+    step.classList.add('hidden');
+    list.replaceChildren();
+    const only = staff[0];
+    return initBooking({ scope: { kind: 'biz', slug, staffId: only.staff_id }, provider: asProvider(only) });
+  }
+  step.classList.remove('hidden');
   $('#staff-label').textContent = `בחירת ${providerLabel(biz)}`;
-  let current = staff.length === 1 ? staff[0].staff_id : null;
+  let current = null;
   const render = () => list.replaceChildren(...staff.map((s) =>
     h('button', { class: 'svc staff', type: 'button', 'aria-pressed': String(s.staff_id === current),
                   onclick: () => { if (s.staff_id === current) return; current = s.staff_id; render(); selectStaff(s.staff_id, asProvider(s)); } },
       h('span', {}, h('b', {}, s.display_name)))));
   render();
-  if (!current) $('#service-list').replaceChildren(muted(`בחרו ${providerLabel(biz)} כדי לראות שירותים`));
-  const first = staff.find((s) => s.staff_id === current);
-  await initBooking({ scope: { kind: 'biz', slug, staffId: current }, provider: first ? asProvider(first) : null });
+  $('#service-list').replaceChildren(muted(`בחרו ${providerLabel(biz)} כדי לראות שירותים`));
+  await initBooking({ scope: { kind: 'biz', slug, staffId: null }, provider: null });
 }
 
 async function startStaff(slug, provider) {

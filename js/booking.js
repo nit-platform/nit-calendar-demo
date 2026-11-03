@@ -1,5 +1,7 @@
-// Booking flow for ONE provider (legacy staff slug, or a business slug + chosen provider): service -> date -> free/busy grid -> dialog (name + phone) -> book / hold+Google.
-// Privacy: the page only learns whether a time is free; busy times carry no name, service or other detail.
+// Booking flow for ONE provider (legacy staff slug, or a business slug + chosen provider): service -> date -> available slots only -> dialog (name + phone) -> book / hold+Google.
+// Privacy: the picker shows only free times; unavailable/taken hours are omitted (no greyed busy buttons).
+// K2/K3/K4 (booking-1min): nearest free slot shortcut, auto-skip single service, jump-to-next-free-day CTA.
+// Remember details: name+phone only in localStorage per business slug (never tokens/secrets).
 import { api, friendlyError, HOLD_VIA_FUNCTION } from './api.js';
 import { $, h, muted, toast, shekel, providerLabel } from './ui.js';
 import { fmtTime, todayISO, addDays, fmtLongDate, fmtShortWeekday, dayOfMonth } from './time.js';
@@ -13,6 +15,7 @@ import { initBookCaptcha, bookCaptchaToken, resetBookCaptcha } from './book-capt
 
 const state = { scope: null, provider: null, services: [], serviceId: null, date: todayISO(), pending: null };
 const HOLD_KEY = 'nit-pending-hold';
+const REMEMBER_KEY = (slug) => `nit-remember:${slug}`;
 
 function savePendingHold(payload) {
   try { sessionStorage.setItem(HOLD_KEY, JSON.stringify(payload)); } catch { /* ignore */ }
@@ -27,9 +30,42 @@ function clearPendingHold() {
   try { sessionStorage.removeItem(HOLD_KEY); } catch { /* ignore */ }
 }
 
+/** Non-sensitive contact recall only (name + phone). Never tokens or secrets. */
+function loadRemembered(slug) {
+  if (!slug) return null;
+  try {
+    const raw = localStorage.getItem(REMEMBER_KEY(slug));
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== 'object') return null;
+    const name = typeof o.name === 'string' ? o.name.trim().slice(0, 60) : '';
+    const phone = typeof o.phone === 'string' ? o.phone.trim().slice(0, 32) : '';
+    if (name.length < 2 || phone.length < 9) return null;
+    return { name, phone };
+  } catch { return null; }
+}
+function saveRemembered(slug, name, phone) {
+  if (!slug) return;
+  try {
+    localStorage.setItem(REMEMBER_KEY(slug), JSON.stringify({ name: String(name).trim().slice(0, 60), phone: String(phone).trim().slice(0, 32) }));
+  } catch { /* storage disabled */ }
+}
+function clearRemembered(slug) {
+  if (!slug) return;
+  try { localStorage.removeItem(REMEMBER_KEY(slug)); } catch { /* ignore */ }
+}
+function rememberSlug() {
+  return state.scope?.slug || null;
+}
+
 export async function initBooking({ scope, provider }) {
   state.scope = scope; state.provider = provider;
   if (provider) loadServices();
+  else {
+    hideQuickSlot();
+    const svcStep = $('#service-step');
+    if (svcStep) svcStep.classList.remove('hidden');
+  }
   const di = $('#date-input');
   di.min = todayISO(); di.max = addDays(todayISO(), DAYS_AHEAD); di.value = state.date;
   const onDateInput = () => {
@@ -69,7 +105,10 @@ export function selection() {
 /** Business link: switch to another provider of the same business. */
 export function selectStaff(staffId, provider) {
   state.scope = { ...state.scope, staffId }; state.provider = provider;
-  state.serviceId = null; state.services = []; slotReq++;
+  state.serviceId = null; state.services = []; slotReq++; quickReq++;
+  hideQuickSlot();
+  const svcStep = $('#service-step');
+  if (svcStep) svcStep.classList.remove('hidden');
   $('#slots').replaceChildren(muted('בחרו שירות ותאריך'));
   loadServices();
 }
@@ -91,15 +130,41 @@ const priceText = (s) => (s.price_varies ? `החל מ-${shekel(s.price)}` : shek
 
 function renderServices() {
   const box = $('#service-list');
+  const svcStep = $('#service-step');
   if (!state.services.length) {
+    if (svcStep) svcStep.classList.remove('hidden');
+    hideQuickSlot();
     box.replaceChildren(muted(state.provider.display_name ? `ל${providerLabel(state.provider)} זה אין שירותים` : 'אין כרגע שירותים זמינים'));
     return;
   }
+  // K3: single service — silent select + hide card; load slots immediately.
+  if (state.services.length === 1) {
+    const only = state.services[0];
+    state.serviceId = only.service_id;
+    if (svcStep) svcStep.classList.add('hidden');
+    box.replaceChildren();
+    loadSlots();
+    refreshQuickSlot();
+    return;
+  }
+  if (svcStep) svcStep.classList.remove('hidden');
+  // Keep prior selection if still present; otherwise wait for a tap (no silent multi pick).
+  if (state.serviceId && !state.services.some((s) => s.service_id === state.serviceId)) {
+    state.serviceId = null;
+  }
   box.replaceChildren(...state.services.map((s) =>
     h('button', { class: 'svc', type: 'button', 'aria-pressed': String(s.service_id === state.serviceId),
-                  onclick: () => { state.serviceId = s.service_id; renderServices(); loadSlots(); } },
+                  onclick: () => { state.serviceId = s.service_id; renderServices(); loadSlots(); refreshQuickSlot(); } },
       h('span', {}, h('b', {}, s.name), h('small', {}, describeSteps(s.steps) || `${s.total_duration_min} דק׳`)),
       h('span', { class: 'price' }, priceText(s)))));
+  if (state.serviceId) {
+    loadSlots();
+    refreshQuickSlot();
+  } else {
+    hideQuickSlot();
+    // Preview nearest slot using the first service so the shortcut appears before a manual pick.
+    refreshQuickSlot({ previewServiceId: state.services[0].service_id });
+  }
 }
 
 function setDate(iso) {
@@ -158,20 +223,82 @@ export async function loadSlots() {
   } catch (e) { if (my === slotReq) box.replaceChildren(muted(friendlyError(e))); }
 }
 
+/** Prefer a regular free slot; fall back to dead-time fill. */
+function pickBestSlot(rows) {
+  const free = (rows || []).filter((r) => r.available);
+  if (!free.length) return null;
+  const nonFill = free.filter((r) => !r.is_dead_time_fill)
+    .sort((a, b) => a.slot_start.localeCompare(b.slot_start));
+  if (nonFill.length) return nonFill[0];
+  return free.slice().sort((a, b) => a.slot_start.localeCompare(b.slot_start))[0];
+}
+
+/** Scan dates [fromDate..max] for the first day with an available slot. */
+async function findFirstAvailable({ fromDate, serviceId, reqRef } = {}) {
+  const svcId = serviceId || state.serviceId;
+  if (!svcId || !state.provider || !state.scope) return null;
+  const today = todayISO();
+  const max = addDays(today, DAYS_AHEAD);
+  let d = fromDate || today;
+  if (d < today) d = today;
+  for (; d <= max; d = addDays(d, 1)) {
+    if (reqRef && reqRef.current !== reqRef.mine) return null;
+    let rows;
+    try { rows = await api.slotGrid(state.scope, svcId, d); }
+    catch { continue; }
+    if (reqRef && reqRef.current !== reqRef.mine) return null;
+    const slot = pickBestSlot(rows);
+    if (slot) return { date: d, slot, rows };
+  }
+  return null;
+}
+
 function renderSlots(rows) {
   const box = $('#slots');
   if (!rows.some((r) => r.available)) {
-    box.replaceChildren(muted(rows.length ? `אין שעות פנויות ב${fmtLongDate(state.date)}` : `אין קבלת קהל ב${fmtLongDate(state.date)}`));
+    // K4: CTA to jump to the next free day (not only a muted line).
+    const emptyMsg = rows.length
+      ? `אין שעות פנויות ב${fmtLongDate(state.date)}`
+      : `אין קבלת קהל ב${fmtLongDate(state.date)}`;
+    const jump = h('button', {
+      type: 'button', class: 'btn primary', id: 'jump-next-free',
+      onclick: () => jumpToNextFreeDay(),
+    }, 'מחפשים יום פנוי…');
+    jump.disabled = true;
+    box.replaceChildren(
+      h('p', { class: 'muted', id: 'slots-empty-msg' }, emptyMsg),
+      h('div', { class: 'actions slots-empty-actions' }, jump),
+      h('p', { class: 'muted small' }, 'או בחרו יום אחר למעלה ↑'),
+    );
+    // Resolve label asynchronously so the button shows the concrete date when found.
+    (async () => {
+      const found = await findFirstAvailable({ fromDate: addDays(state.date, 1) });
+      if (!box.contains(jump)) return;
+      if (!found) {
+        jump.textContent = 'אין ימים פנויים בטווח';
+        jump.disabled = true;
+        jump.classList.remove('primary');
+        jump.classList.add('ghost');
+        return;
+      }
+      jump.disabled = false;
+      jump.dataset.jumpDate = found.date;
+      jump.textContent = `קפצו ליום הפנוי הבא — ${fmtLongDate(found.date)}`;
+    })().catch(() => {
+      if (box.contains(jump)) {
+        jump.textContent = 'לא ניתן לבדוק ימים נוספים כרגע';
+        jump.disabled = true;
+      }
+    });
     return;
   }
+  // Only available slots — taken/unavailable hours are not shown at all.
   const fills = rows.filter((r) => r.available && r.is_dead_time_fill);
-  const rest = rows.filter((r) => !(r.available && r.is_dead_time_fill)).sort((a, b) => a.slot_start.localeCompare(b.slot_start));
-  const btn = (r) => r.available
-    ? h('button', { class: 'slot' + (r.is_dead_time_fill ? ' fill' : ''), type: 'button',
-        'aria-label': `${fmtTime(r.slot_start)}${r.is_dead_time_fill ? ' – בזמן המתנה' : ''}`, onclick: () => openDialog(r) },
-        fmtTime(r.slot_start))
-    : h('button', { class: 'slot busy', type: 'button', disabled: '', 'aria-disabled': 'true',
-        'aria-label': `${fmtTime(r.slot_start)} – תפוס` }, fmtTime(r.slot_start));
+  const rest = rows.filter((r) => r.available && !r.is_dead_time_fill)
+    .sort((a, b) => a.slot_start.localeCompare(b.slot_start));
+  const btn = (r) => h('button', { class: 'slot' + (r.is_dead_time_fill ? ' fill' : ''), type: 'button',
+      'aria-label': `${fmtTime(r.slot_start)}${r.is_dead_time_fill ? ' – בזמן המתנה' : ''}`, onclick: () => openDialog(r) },
+      fmtTime(r.slot_start));
   const parts = [];
   if (fills.length) parts.push(h('div', { class: 'slot-group fill-group' },
     h('h3', {}, '⭐ מומלץ'), h('div', { class: 'slot-grid' }, fills.map(btn))));
@@ -183,8 +310,117 @@ function renderSlots(rows) {
   try { box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { /* ignore */ }
 }
 
+async function jumpToNextFreeDay() {
+  const btn = $('#jump-next-free');
+  const known = btn?.dataset?.jumpDate;
+  if (known) { setDate(known); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'מחפשים…'; }
+  const found = await findFirstAvailable({ fromDate: addDays(state.date, 1) });
+  if (!found) {
+    toast('אין ימים פנויים בטווח', true);
+    if (btn) { btn.textContent = 'אין ימים פנויים בטווח'; btn.disabled = true; }
+    return;
+  }
+  setDate(found.date);
+}
+
+let quickReq = 0;
+function hideQuickSlot() {
+  const step = $('#quick-slot-step');
+  if (step) step.classList.add('hidden');
+  const body = $('#quick-slot-body');
+  if (body) body.replaceChildren();
+}
+
+async function refreshQuickSlot({ previewServiceId } = {}) {
+  const step = $('#quick-slot-step'), body = $('#quick-slot-body');
+  if (!step || !body) return;
+  const svcId = state.serviceId || previewServiceId;
+  if (!svcId || !state.provider) { hideQuickSlot(); return; }
+  const my = ++quickReq;
+  const reqRef = { get current() { return quickReq; }, mine: my };
+  step.classList.remove('hidden');
+  body.replaceChildren(muted('בודקים זמינות…'));
+  const found = await findFirstAvailable({ fromDate: todayISO(), serviceId: svcId, reqRef });
+  if (my !== quickReq) return;
+  if (!found) {
+    body.replaceChildren(muted('אין שעה פנויה בטווח הקרוב'));
+    return;
+  }
+  const svc = state.services.find((s) => s.service_id === svcId);
+  const applySelection = () => {
+    // If preview used another service, commit it before opening the dialog.
+    if (state.serviceId !== svcId) {
+      state.serviceId = svcId;
+      renderServices();
+    }
+    if (state.date !== found.date) {
+      state.date = found.date;
+      $('#date-input').value = found.date;
+      renderDateStrip();
+    }
+    openDialog(found.slot);
+    // Keep grid in sync after dialog opens.
+    loadSlots();
+  };
+  const kids = [
+    h('p', { class: 'quick-slot-meta' },
+      h('bdi', { dir: 'ltr' }, `${fmtLongDate(found.date)} · ${fmtTime(found.slot.slot_start)}`),
+      svc ? ` · ${svc.name}` : '',
+      state.provider.display_name ? ` אצל ${state.provider.display_name}` : ''),
+  ];
+  if (found.slot.is_dead_time_fill) {
+    kids.push(h('p', { class: 'muted small' }, '⭐ בזמן המתנה ביומן'));
+  }
+  kids.push(h('div', { class: 'actions' },
+    h('button', { type: 'button', class: 'btn primary', id: 'quick-slot-book', onclick: applySelection },
+      'קבעו את השעה הזו')));
+  body.replaceChildren(...kids);
+}
+
+function applyRememberedToForm() {
+  const form = $('#book-form');
+  if (!form) return;
+  const remembered = loadRemembered(rememberSlug());
+  const nameEl = form.elements.name, phoneEl = form.elements.phone;
+  const remBox = $('#book-remember');
+  const remPanel = $('#book-remembered');
+  const fields = $('#book-contact-fields');
+  if (remembered) {
+    nameEl.value = remembered.name;
+    phoneEl.value = remembered.phone;
+    if (remBox) remBox.checked = true;
+    if (remPanel) {
+      remPanel.classList.remove('hidden');
+      remPanel.replaceChildren(
+        h('p', {}, 'נקבע על שם: ', h('b', {}, remembered.name), ' · ', h('bdi', { dir: 'ltr' }, remembered.phone)),
+        h('div', { class: 'actions' },
+          h('button', { type: 'button', class: 'btn small ghost', id: 'book-forget', onclick: () => {
+            clearRemembered(rememberSlug());
+            if (remBox) remBox.checked = false;
+            nameEl.value = ''; phoneEl.value = '';
+            remPanel.classList.add('hidden');
+            remPanel.replaceChildren();
+            if (fields) fields.classList.remove('hidden');
+            nameEl.focus();
+            toast('פרטי הקשר נמחקו מהמכשיר');
+          } }, 'שכחו אותי'),
+          h('button', { type: 'button', class: 'btn small ghost', id: 'book-edit-contact', onclick: () => {
+            if (fields) fields.classList.remove('hidden');
+            nameEl.focus();
+          } }, 'שינוי פרטים')),
+      );
+    }
+  } else {
+    if (remBox) remBox.checked = false;
+    if (remPanel) { remPanel.classList.add('hidden'); remPanel.replaceChildren(); }
+  }
+  if (fields) fields.classList.remove('hidden');
+}
+
 async function openDialog(slot) {
   const svc = state.services.find((s) => s.service_id === state.serviceId);
+  if (!svc) return;
   state.pending = slot;
   // Customer duration excludes buffer_after (included in slot_end for scheduling only).
   const endTs = customerSlotEnd(slot.slot_start, svc.total_duration_min);
@@ -201,6 +437,7 @@ async function openDialog(slot) {
   }
   $('#book-summary').replaceChildren(...summaryKids);
   $('#book-error').textContent = '';
+  applyRememberedToForm();
   const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
   const note = $('#book-auth-note'), holdNote = $('#book-hold-note'), cap = $('#book-captcha');
   const needsHold = state.scope.kind === 'biz' && auth.googleSignInEnabled() && !session;
@@ -216,7 +453,8 @@ async function openDialog(slot) {
   const submit = $('#book-submit');
   if (submit) submit.textContent = needsHold ? 'שמירת שעה והתחברות' : 'קבע תור';
   $('#book-dialog').showModal();
-  $('#book-form').elements.name.focus();
+  const nameEl = $('#book-form').elements.name;
+  if (nameEl && !nameEl.value) nameEl.focus();
 }
 
 function finishBookSuccess(res) {
@@ -246,6 +484,7 @@ function finishBookSuccess(res) {
     import('./main.js').then((m) => m.refreshMyAppts?.(state.scope.slug)).catch(() => {});
   }
   loadSlots();
+  refreshQuickSlot();
 }
 
 async function submitBooking(ev) {
@@ -263,6 +502,7 @@ async function submitBooking(ev) {
     return;
   }
   nameEl.setCustomValidity(''); phoneEl.setCustomValidity('');
+  const wantRemember = !!(f.elements.remember && f.elements.remember.checked);
   btn.disabled = true; $('#book-error').textContent = '';
   try {
     const session = auth.googleSignInEnabled() ? await auth.getCustomerSession() : null;
@@ -278,6 +518,7 @@ async function submitBooking(ev) {
         scope: state.scope, serviceId: state.serviceId, startsAt: state.pending.slot_start, captcha,
       });
       resetBookCaptcha();
+      // Remember preference applies after a successful confirm; stash flag with hold for resume.
       savePendingHold({
         slug: state.scope.slug,
         staffId: hold.staff_id ?? state.scope.staffId,
@@ -286,6 +527,7 @@ async function submitBooking(ev) {
         holdToken: hold.hold_token,
         expiresAt: hold.expires_at,
         name, phone,
+        remember: wantRemember,
       });
       // Avoid welcome loop after OAuth return.
       setWelcomeSkip(state.scope.slug);
@@ -297,6 +539,9 @@ async function submitBooking(ev) {
 
     const res = await api.book({ scope: state.scope, serviceId: state.serviceId,
                                  startsAt: state.pending.slot_start, name, phone });
+    const slug = rememberSlug();
+    if (wantRemember) saveRemembered(slug, name, phone);
+    else clearRemembered(slug);
     finishBookSuccess(res);
   } catch (e) {
     $('#book-error').textContent = friendlyError(e);
@@ -319,6 +564,8 @@ export async function resumeHeldBooking() {
     });
     // Ensure scope is biz for manage link UI
     if (!state.scope) state.scope = { kind: 'biz', slug: pending.slug, staffId: pending.staffId };
+    if (pending.remember) saveRemembered(pending.slug, pending.name, pending.phone);
+    else if (pending.remember === false) clearRemembered(pending.slug);
     finishBookSuccess(res);
   } catch (e) {
     const msg = e.message || '';
