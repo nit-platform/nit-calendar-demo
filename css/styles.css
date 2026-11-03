@@ -66,6 +66,7 @@ dialog input{font:inherit;padding:10px;border:1.5px solid #d7d7dc;border-radius:
 html,body{overflow-x:hidden}
 .biz{margin:2px 0 0;font-size:.85rem;opacity:.85}
 
+/* taken slots are omitted from the picker; .slot.busy kept unused for safety */
 .slot.busy,.slot:disabled{background:#ececef;border-color:#e2e2e6;color:#6b6b70;cursor:not-allowed;text-decoration:line-through;box-shadow:none}
 
 /* waitlist + inbox (000013) */
@@ -121,3 +122,14 @@ body.welcome-open{overflow:hidden}
 }
 .btn.danger{background:var(--err);color:#fff}
 dialog.mg-confirm-form, .mg-confirm-form{padding:18px;display:grid;gap:12px}
+
+/* booking-1min: K2 nearest slot + remember details */
+#quick-slot-step{border:2px solid var(--brand-2);background:linear-gradient(180deg,#eef4fb,#fff)}
+#quick-slot-step h2{margin-bottom:8px}
+.quick-slot-meta{margin:0 0 8px;font-size:.95rem}
+.slots-empty-actions{margin:10px 0;justify-content:flex-start}
+.remember-opt{font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px}
+.remember-opt input{width:auto;margin:0}
+#book-contact-fields{display:grid;gap:12px}
+.remembered{background:var(--bg);border-radius:10px;padding:10px;font-size:.92rem}
+.remembered .actions{margin-top:8px}
