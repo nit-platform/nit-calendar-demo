@@ -10,6 +10,7 @@ import { renderDays } from './days.js';
 import { renderSettings } from './settings.js';
 import { renderWaitlist } from './waitlist.js';
 import { renderOnboard } from './onboard.js';
+import { initPwa } from '../../js/pwa.js';
 
 const VIEWS = ['loading', 'login', 'nobiz', 'onboard', 'calendar', 'staff', 'services', 'hours', 'days', 'waitlist', 'settings'];
 const TABS = { calendar: renderCalendar, staff: renderStaff, services: renderServices, hours: renderHours, days: renderDays, waitlist: renderWaitlist, settings: renderSettings };
@@ -280,6 +281,7 @@ wireNobiz();
 
 // ---------- boot ----------
 async function start() {
+  initPwa().catch(() => {});
   show('loading');
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { show('login'); await refreshSetupBanner(); return; }
