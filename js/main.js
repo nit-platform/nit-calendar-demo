@@ -14,6 +14,7 @@ import { renderManage } from './manage.js';
 import { DEFAULT_BUSINESS_SLUG } from './config.js';
 import * as auth from './auth.js';
 import { maybeShowWelcome, hideWelcome } from './welcome.js';
+import { initPwa, applyManifest } from './pwa.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
@@ -173,6 +174,7 @@ function setTitle(main, biz) {
 }
 
 async function startBusiness(slug, biz, explicit) {
+  applyManifest({ slug });
   const qs = new URLSearchParams(location.search);
   const offer = qs.get('offer');
   const manage = qs.get('manage');
@@ -237,6 +239,7 @@ async function startBusiness(slug, biz, explicit) {
 }
 
 async function startStaff(slug, provider) {
+  applyManifest({ slug });
   canonicalize(slug);
   setTitle(provider.display_name, provider.business_name);
   document.title = `${provider.display_name} · ${provider.business_name} – קביעת תור`;
@@ -291,6 +294,7 @@ async function start() {
   }
 }
 fixFavicon();
+initPwa().catch(() => {});
 start();
 
 // A hash-only change (e.g. typing #/b/<slug>) does not reload the page; reload if the slug changed.
