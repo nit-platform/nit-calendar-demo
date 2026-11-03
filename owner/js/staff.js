@@ -8,11 +8,20 @@ import { askDangerConfirm } from './confirm.js';
 const NAME_MIN = 2;
 const NAME_MAX = 60;
 
+function collapseWs(s) {
+  return String(s || '').trim().replace(/\s+/g, ' ');
+}
+
 function validateName(raw) {
-  const name = (raw || '').trim();
+  const name = collapseWs(raw);
   if (name.length < NAME_MIN || name.length > NAME_MAX) return { ok: false, msg: `השם חייב להיות בין ${NAME_MIN} ל-${NAME_MAX} תווים.` };
   if (/[<>]/.test(name)) return { ok: false, msg: 'השם לא יכול לכלול את התווים < או >.' };
   return { ok: true, name };
+}
+
+function hasDupStaffName(name, ctx, excludeId) {
+  const key = name.toLowerCase();
+  return (ctx.staff || []).some((s) => s.id !== excludeId && collapseWs(s.display_name).toLowerCase() === key);
 }
 
 function bookingGap(st, meta) {
@@ -84,6 +93,10 @@ function staffCard(st, ctx, label, rerender, meta) {
     errEl.textContent = ''; errEl.classList.add('hidden');
     const v = validateName(form.display_name.value);
     if (!v.ok) { errEl.textContent = v.msg; errEl.classList.remove('hidden'); form.display_name.focus(); return; }
+    if (hasDupStaffName(v.name, ctx, st?.id)) {
+      errEl.textContent = 'שם נותן השירות כבר קיים בעסק.';
+      errEl.classList.remove('hidden'); form.display_name.focus(); return;
+    }
     const btn = form.querySelector('[type=submit]'); btn.disabled = true;
     try {
       if (st) {
