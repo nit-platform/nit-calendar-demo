@@ -42,7 +42,7 @@ function staffCard(st, ctx, label, rerender, meta) {
       h('button', { type: 'button', class: 'btn small primary staff-fix-defaults', onclick: async () => {
         try {
           await rpc('owner_staff_ensure_defaults', { p_staff_id: st.id });
-          await reloadContext(); await refreshSetupBanner(); toast('עודכן להופעה בדף ההזמנה'); rerender();
+          await reloadContext(); await refreshSetupBanner(); await rerender(); toast('עודכן להופעה בדף ההזמנה');
         } catch (e) { toast(heError(e), true); }
       } }, 'תיקון מהיר'),
       (!(meta?.hours > 0) ? h('button', { type: 'button', class: 'btn small outline', onclick: () => openTab('hours') }, 'לשעות עבודה') : null),
@@ -68,7 +68,7 @@ function staffCard(st, ctx, label, rerender, meta) {
         }))) return;
         try {
           await q(sb.from('staff').update({ is_active: false }).eq('id', st.id).select('id'));
-          await reloadContext(); await refreshSetupBanner(); toast('הושבת'); rerender();
+          await reloadContext(); await refreshSetupBanner(); await rerender(); toast('הושבת');
         } catch (e) { toast(heError(e), true); }
       } }, 'השבתה') : null,
       st ? h('button', { type: 'button', class: 'btn ghost staff-delete', onclick: async () => {
@@ -79,7 +79,7 @@ function staffCard(st, ctx, label, rerender, meta) {
         }))) return;
         try {
           await q(sb.from('staff').delete().eq('id', st.id).select('id'));
-          await reloadContext(); await refreshSetupBanner(); toast('נמחק'); rerender();
+          await reloadContext(); await refreshSetupBanner(); await rerender(); toast('נמחק');
         } catch (e) {
           toast(/foreign key|23503/.test((e.message || '') + (e.code || ''))
             ? 'יש תורים משויכים. השביתו במקום למחוק.' : heError(e), true);
@@ -106,7 +106,7 @@ function staffCard(st, ctx, label, rerender, meta) {
       } else {
         await rpc('owner_add_staff', { p_business_id: ctx.business.id, p_display_name: v.name });
       }
-      await reloadContext(); await refreshSetupBanner(); toast(st ? 'נשמר' : 'נוסף'); rerender();
+      await reloadContext(); await refreshSetupBanner(); await rerender(); toast(st ? 'נשמר' : 'נוסף');
     } catch (err) {
       errEl.textContent = heError(err); errEl.classList.remove('hidden');
       toast(heError(err), true);
@@ -154,5 +154,9 @@ export async function renderStaff(root, ctx) {
     ? ctx.staff.map((s) => staffCard(s, ctx, label, rerender, meta[s.id]))
     : [h('div', { class: 'card', id: 'staff-empty' },
         muted(`עדיין אין ${label}. הוסיפו את הראשון כדי לפתוח יומן ושעות.`))];
+  // keep cards the owner had expanded open across the re-render (save / add replace the whole list)
+  for (const d of root.querySelectorAll('details.staff-card[open][data-staff-id]')) {
+    const c = list.find((el) => el.dataset && el.dataset.staffId === d.dataset.staffId); if (c) c.open = true;
+  }
   root.replaceChildren(...list, staffCard(null, ctx, label, rerender, null));
 }

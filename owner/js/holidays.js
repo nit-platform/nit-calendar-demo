@@ -26,12 +26,13 @@ export function renderHolidays(ctx) {
     catch (e) { card.replaceChildren(h('h2', {}, 'חגים וערבי חג'), muted(heError(e))); return; }
     const p = ctx.policies;
     const item = (r) => {
-      const d = drafts.get(r.date);
+      const dkey = `${ctx.business.id}|${r.date}`;
+      const d = drafts.get(dkey);
       const curMode = d ? d.mode : (r.override_mode || '');
       const mode = h('select', { class: 'hol-mode', disabled: !isOwner }, MODES.map(([v, t]) => h('option', { value: v, selected: curMode === v }, t)));
       const open = h('input', { type: 'time', class: 'hol-open', step: 300, value: d ? d.open : (hhmm(r.override_open) || '') });
       const close = h('input', { type: 'time', class: 'hol-close', step: 300, value: d ? d.close : (hhmm(r.override_close) || '') });
-      const keep = () => drafts.set(r.date, { mode: mode.value, open: open.value, close: close.value });
+      const keep = () => drafts.set(dkey, { mode: mode.value, open: open.value, close: close.value });
       for (const el of [mode, open, close]) { el.addEventListener('change', keep); el.addEventListener('input', keep); }
       const times = h('span', { class: 'hol-times', hidden: mode.value !== 'hours' }, 'מ-', open, ' עד ', close);
       for (const el of [open, close]) el.disabled = !isOwner;
@@ -47,7 +48,7 @@ export function renderHolidays(ctx) {
               open_time: m === 'hours' ? open.value : null, close_time: m === 'hours' ? close.value : null }).select('date'));
             if (!rowsUp.length) throw new Error('permission denied');
           }
-          drafts.delete(r.date); toast('נשמר'); load();
+          drafts.delete(dkey); toast('נשמר'); load();
         } catch (e) { toast(heError(e), true); }
       });
       return h('div', { class: 'item', 'data-holiday': r.date },

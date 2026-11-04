@@ -148,6 +148,9 @@ export async function openTab(name) {
   }
   show(name);
   const root = $('#view-' + name);
+  // Drop the previous render right away: a tab re-renders asynchronously (fetch, then replace), and
+  // leaving the old, still-interactive DOM up lets edits/errors land in nodes that are about to vanish.
+  root.replaceChildren(h('p', { class: 'muted tab-loading', 'aria-busy': 'true' }, 'טוען…'));
   try { await TABS[name](root, ctx); } catch (e) { root.replaceChildren(Object.assign(document.createElement('div'), { className: 'card', textContent: heError(e) })); }
   await refreshSetupBanner();
   refreshTabsOverflow();
@@ -220,6 +223,8 @@ async function switchBusiness(id) {
 }
 
 async function enterDashboard(business) {
+  // unsaved per-tab drafts belong to the previous business
+  if (!ctx.business || ctx.business.id !== business.id) ctx.holidayDrafts = new Map();
   ctx.business = business;
   localStorage.setItem('nit-owner-business', business.id);
   await reloadContext();
