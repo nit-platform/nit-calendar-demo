@@ -1,7 +1,7 @@
 # NIT – דמו הזמנת תור (Hebrew booking demo)
 
 לכל עסק יש קישור הזמנה אישי (`?b=<slug>`) שבעל העסק רואה, מעתיק ועורך בממשק הניהול. אין רשימת עסקים, לא באתר ולא ב-API.
-הדף פונה רק לפונקציות `public_*` (לפי slug של עסק) ו-`demo_*` (קישורי ספר ישנים של עסק ההדגמה).
+הדף פונה רק לפונקציות `public_*` (לפי slug של עסק) ו-`demo_*` (קישורי נותן־שירות ישנים של עסק ההדגמה).
 
 **English:** a static site (no build step) that loads supabase-js from a CDN. Every business has a personal booking link
 (`businesses.public_slug`, migration 000011), e.g. `https://nit-platform.github.io/nit-calendar-demo/?b=nit-demo`.
@@ -52,8 +52,8 @@ URL: `https://nit-platform.github.io/nit-calendar-demo/owner/`. A static page (s
 - Login: email OTP (6-digit code, `signInWithOtp` → `verifyOtp` type `email`) or Google (`signInWithOAuth`, PKCE, `redirectTo` = the owner URL).
 - After login the page calls `claim_owner_invites()`. It turns pending invites for the user's **confirmed** email into memberships. Migration 8 seeds `nit.platform@gmail.com` as owner of the demo shop.
 - Tabs:
-  - יומן (calendar): day and week views per barber, with wait steps and in-wait fills; cancel and no-show.
-  - שירותים (services): prices, durations, wait min/max, wait mode, overlap, active, and per-barber offer and price.
+  - יומן (calendar): day and week views per provider, with wait steps and in-wait fills; cancel and no-show.
+  - שירותים (services): prices, durations, wait min/max, wait mode, overlap, active, and per-provider offer and price.
   - שעות והפסקות (hours and breaks): working hours, recurring breaks and time-off periods.
   - ימים מיוחדים (special days): manual days, and overriding holidays imported from the calendar.
   - הגדרות (settings): the booking-link card (full URL, copy button, slug editing: a-z 0-9 '-', 3–40 chars, reserved words blocked, unique; owner only, enforced in the DB), business details and booking policies.

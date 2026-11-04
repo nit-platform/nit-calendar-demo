@@ -1,5 +1,7 @@
 /* NIT PWA service worker — same-origin app shell only. Never caches APIs/auth/cross-origin. */
-const CACHE = 'nit-shell-v2';
+/* Bump BUILD whenever shell assets change so activate drops the old cache. */
+const BUILD = 'v5';
+const CACHE = `nit-shell-${BUILD}`;
 const PRECACHE = [
   './',
   './index.html',
@@ -7,10 +9,14 @@ const PRECACHE = [
   './manifest.webmanifest',
   './favicon.svg',
   './css/styles.css',
+  './css/tokens.css',
+  './icons/favicon.svg',
+  './icons/favicon-32.png',
+  './js/theme.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-512-maskable.png',
-  './icons/apple-touch-icon.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon-180.png',
   './js/api.js',
   './js/auth.js',
   './js/book-captcha.js',
@@ -109,6 +115,23 @@ async function networkFirstHtml(request) {
   }
 }
 
+/** Network-first for CSS/JS so deploys are never stuck on a stale shell asset. */
+async function networkFirstAsset(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const fresh = await fetch(request);
+    if (fresh && fresh.ok && fresh.type === 'basic') {
+      try { await cache.put(request, fresh.clone()); } catch (_) {}
+    }
+    return fresh;
+  } catch (_) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw new Error('offline');
+  }
+}
+
+/** Cache-first for immutable-ish static assets (icons, fonts, manifest). */
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(request);
@@ -139,8 +162,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static same-origin assets only (css/js/icons/manifest/svg/png).
-  if (/\.(?:css|js|png|svg|webmanifest|ico|woff2?)$/i.test(url.pathname) || url.pathname.includes('/icons/')) {
+  // CSS/JS: network-first so a deploy is never stuck on a stale shell.
+  if (/\.(?:css|js)$/i.test(url.pathname)) {
+    event.respondWith(networkFirstAsset(request));
+    return;
+  }
+
+  // Icons / fonts / manifest: cache-first (versioned via CACHE bump).
+  if (/\.(?:png|svg|webmanifest|ico|woff2?)$/i.test(url.pathname) || url.pathname.includes('/icons/')) {
     event.respondWith(cacheFirst(request));
   }
 });

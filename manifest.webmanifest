@@ -1,16 +1,16 @@
 {
-  "name": "NIT יומן",
+  "name": "NIT תורים",
   "short_name": "NIT",
-  "description": "יומן חכם לעסקי שירות",
-  "dir": "rtl",
+  "description": "הזמנת תורים אונליין לעסקי שירות",
   "lang": "he",
-  "display": "standalone",
-  "orientation": "any",
-  "background_color": "#f6f4f0",
-  "theme_color": "#1f3a5f",
+  "dir": "rtl",
   "start_url": "./",
   "scope": "./",
   "id": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1D6FD8",
+  "background_color": "#F5F8FC",
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -25,7 +25,7 @@
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512-maskable.png",
+      "src": "icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
