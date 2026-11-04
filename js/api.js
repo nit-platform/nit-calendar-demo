@@ -105,7 +105,7 @@ export const api = {
   listServices: (sc) => sc.kind === 'biz'
     ? rpc('public_list_services', { p_slug: sc.slug, p_staff_id: sc.staffId })
     : rpc('demo_list_services', { p_slug: sc.slug }),
-  // Every grid start time of the day: { slot_start, slot_end, available, is_dead_time_fill }. Free/busy only.
+  // Free start times only (server filters busy rows since 000043): { slot_start, slot_end, available(always true), is_dead_time_fill }.
   slotGrid: (sc, serviceId, date) => sc.kind === 'biz'
     ? rpc('public_slot_grid', { p_slug: sc.slug, p_staff_id: sc.staffId, p_service_id: serviceId, p_date: date })
     : rpc('demo_slot_grid', { p_slug: sc.slug, p_service_id: serviceId, p_date: date }),

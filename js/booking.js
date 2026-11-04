@@ -248,7 +248,7 @@ export async function loadSlots() {
 
 /** Prefer a regular free slot; fall back to dead-time fill. */
 function pickBestSlot(rows) {
-  const free = (rows || []).filter((r) => r.available);
+  const free = (rows || []).filter((r) => r.available !== false);
   if (!free.length) return null;
   const nonFill = free.filter((r) => !r.is_dead_time_fill)
     .sort((a, b) => a.slot_start.localeCompare(b.slot_start));
@@ -278,7 +278,7 @@ async function findFirstAvailable({ fromDate, serviceId, reqRef } = {}) {
 
 function renderSlots(rows) {
   const box = $('#slots');
-  if (!rows.some((r) => r.available)) {
+  if (!rows.some((r) => r.available !== false)) {
     // K4: CTA to jump to the next free day (not only a muted line).
     const emptyMsg = rows.length
       ? `אין שעות פנויות ב${fmtLongDate(state.date)}`
@@ -316,8 +316,8 @@ function renderSlots(rows) {
     return;
   }
   // Only available slots — taken/unavailable hours are not shown at all.
-  const fills = rows.filter((r) => r.available && r.is_dead_time_fill);
-  const rest = rows.filter((r) => r.available && !r.is_dead_time_fill)
+  const fills = rows.filter((r) => r.available !== false && r.is_dead_time_fill);
+  const rest = rows.filter((r) => r.available !== false && !r.is_dead_time_fill)
     .sort((a, b) => a.slot_start.localeCompare(b.slot_start));
   const btn = (r) => h('button', { class: 'slot' + (r.is_dead_time_fill ? ' fill' : ''), type: 'button',
       'aria-label': `${fmtTime(r.slot_start)}${r.is_dead_time_fill ? ' – בזמן המתנה' : ''}`, onclick: () => openDialog(r) },

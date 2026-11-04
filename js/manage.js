@@ -116,7 +116,7 @@ async function openReschedule(slug, token, data, panel, done) {
       slotsBox.replaceChildren(muted('טוען…'));
       try {
         const rows = await api.slotGrid(scope, data.service_id, pickDate.value);
-        const free = rows.filter((r) => r.available);
+        const free = rows.filter((r) => r.available !== false);
         if (!free.length) { slotsBox.replaceChildren(muted('אין שעות פנויות ביום זה')); return; }
         slotsBox.replaceChildren(h('div', { class: 'slot-grid' }, free.map((r) =>
           h('button', { type: 'button', class: 'slot', onclick: async () => {
