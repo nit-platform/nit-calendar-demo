@@ -172,7 +172,7 @@ function notFound() {
   if (h) h.textContent = 'העסק לא נמצא';
   document.title = 'NIT – העסק לא נמצא';
 }
-const isNotFound = (e) => /business not found|barber not found|PT404|PGRST116/.test(`${e?.message || ''} ${e?.code || ''}`) || e?.code === 'PGRST116' || e?.status === 404;
+const isNotFound = (e) => /business not found|provider not found|barber not found|PT404|PGRST116/.test(`${e?.message || ''} ${e?.code || ''}`) || e?.code === 'PGRST116' || e?.status === 404;
 
 function setTitle(main, biz) {
   const el = $('#business-title');

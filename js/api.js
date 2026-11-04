@@ -19,7 +19,8 @@ const ERRORS = {
   'invalid name': 'נא להזין שם (2–60 תווים).',
   'too many bookings for this phone today': 'הגעתם למספר התורים המרבי להיום מהטלפון הזה.',
   'demo is busy, try later': 'ההדגמה עמוסה כרגע, נסו שוב בעוד מעט.',
-  'barber not found': 'הדף לא נמצא.',
+  'barber not found': 'הדף לא נמצא.', // legacy server message (demo_barber RPC), kept for compatibility
+  'provider not found': 'הדף לא נמצא.',
   'business not found': 'הדף לא נמצא.',
   'too many bookings, try again in a minute': 'יותר מדי ניסיונות. נסו שוב בעוד דקה.',
   'too many bookings, try later': 'העסק עמוס כרגע, נסו שוב בעוד מעט.',
