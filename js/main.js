@@ -15,17 +15,24 @@ import { DEFAULT_BUSINESS_SLUG } from './config.js';
 import * as auth from './auth.js';
 import { maybeShowWelcome, hideWelcome } from './welcome.js';
 import { initPwa, applyManifest } from './pwa.js';
+import { applyTheme } from './theme.js';
 
 // Customer page: free/busy only. The full day calendar is for the business owner (owner_day_view, authenticated).
 function show(name) { for (const id of ['view-book', 'view-missing', 'view-offer', 'view-manage']) $('#' + id).classList.toggle('hidden', id !== 'view-' + name); }
 
-/** Absolute favicon so /b/<slug> does not request a relative /b/favicon.svg (404). */
+/** Absolute icon URLs so /b/<slug> does not resolve relative icons under /b/ (404). */
 function fixFavicon() {
-  const link = document.querySelector('link[rel="icon"]');
-  if (!link) return;
   const base = siteBase();
   const root = `${location.origin}${base.endsWith('/') ? base : `${base}/`}`;
-  try { link.href = new URL('favicon.svg', root).href; } catch { /* ignore */ }
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
+    const href = link.getAttribute('href');
+    if (!href || /^(?:https?:|data:|blob:)/i.test(href)) return;
+    try {
+      // Strip leading ./ or ../ so we always resolve against the app root (not /b/<slug>).
+      const rel = href.replace(/^(?:\.\/)+/, '').replace(/^(?:\.\.\/)+/, '');
+      link.href = new URL(rel, root).href;
+    } catch { /* ignore */ }
+  });
 }
 
 
@@ -174,6 +181,7 @@ function setTitle(main, biz) {
 }
 
 async function startBusiness(slug, biz, explicit) {
+  applyTheme(biz.theme);
   applyManifest({ slug });
   const qs = new URLSearchParams(location.search);
   const offer = qs.get('offer');
@@ -258,6 +266,7 @@ function withTimeout(promise, ms, label) {
 
 async function start() {
   fixFavicon();
+  applyTheme('blue');
   const attempt = slugAttempt();
   if (attempt.kind === 'invalid') return notFound();
   const fromUrl = attempt.kind === 'ok' ? attempt.slug : null;

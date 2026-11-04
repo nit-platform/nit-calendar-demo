@@ -1,6 +1,6 @@
 // Progressive Web App helpers: dynamic manifest (?b= preserved), SW register, update prompt.
-const THEME = '#1f3a5f';
-const BG = '#f6f4f0';
+const THEME = '#1D6FD8';
+const BG = '#F5F8FC';
 
 function isOwnerPath() {
   return /\/owner(?:\/|$)/.test(location.pathname);
@@ -17,7 +17,7 @@ function iconList(root) {
   return [
     { src: new URL('icons/icon-192.png', root).href, sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: new URL('icons/icon-512.png', root).href, sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: new URL('icons/icon-512-maskable.png', root).href, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: new URL('icons/icon-maskable-512.png', root).href, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ];
 }
 
@@ -48,13 +48,13 @@ export function applyManifest({ slug } = {}) {
     ? new URL('owner/', root).href
     : (s ? `${base}?b=${encodeURIComponent(s)}` : base);
   const manifest = {
-    name: owner ? 'NIT ניהול' : 'NIT יומן',
+    name: owner ? 'NIT ניהול' : 'NIT תורים',
     short_name: 'NIT',
-    description: owner ? 'ניהול העסק ב-NIT' : 'יומן חכם לעסקי שירות',
+    description: owner ? 'ניהול העסק ב-NIT' : 'הזמנת תורים אונליין לעסקי שירות',
     dir: 'rtl',
     lang: 'he',
     display: 'standalone',
-    orientation: 'any',
+    orientation: 'portrait-primary',
     background_color: BG,
     theme_color: THEME,
     start_url: startUrl,
