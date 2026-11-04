@@ -1,6 +1,6 @@
 /* NIT PWA service worker — same-origin app shell only. Never caches APIs/auth/cross-origin. */
 /* Bump BUILD whenever shell assets change so activate drops the old cache. */
-const BUILD = 'v5';
+const BUILD = 'v6';
 const CACHE = `nit-shell-${BUILD}`;
 const PRECACHE = [
   './',
