@@ -53,6 +53,16 @@
   --warn-border-strong: #F0C36D;
   --warn-ink: #5C4400;
   --warn-ink-soft: #A15C00;
+  --on-danger: #FFFFFF;
+  --note-ok-bg: #F1F8E9;
+  --note-ok-border: #C5E1A5;
+  --pending-outline: #F0A000;
+  /* Google sign-in button (brand colours, theme-independent) */
+  --google-bg: #FFFFFF;
+  --google-bg-hover: #F8F9FA;
+  --google-ink: #3C4043;
+  --google-border: #DADCE0;
+  --google-focus: #4285F4;
 
   /* Shadows use --ink from the active theme */
   --sh-sm: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent),

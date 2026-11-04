@@ -1,5 +1,5 @@
 /* NIT customer + shared shell — Direction Blue (tokens.css supplies themes). */
-html { background: var(--page-bg, #DCE6F2); }
+html { background: var(--page-bg); }
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -107,7 +107,7 @@ main { max-width: 760px; margin: 0 auto; padding: 12px; }
 .date-strip-wrap.at-end .date-strip { mask-image: linear-gradient(to left, #000 0, #000 calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to left, #000 0, #000 calc(100% - 16px), transparent); }
 .date-strip-wrap.at-start.at-end .date-strip { mask-image: none; -webkit-mask-image: none; }
 .strip-nav {
-  flex: 0 0 auto; width: 36px; height: var(--tap-min);
+  flex: 0 0 auto; width: var(--tap-min); min-width: var(--tap-min); height: var(--tap-min); min-height: var(--tap-min);
   border-radius: var(--radius-md); border: 1.5px solid var(--border);
   background: var(--surface); cursor: pointer; font-size: 1.2rem; line-height: 1; color: var(--primary);
 }
@@ -171,7 +171,7 @@ dialog input {
   display: inline-block; background: var(--fill); color: var(--fill-ink);
   border-radius: 6px; padding: 1px 6px; font-size: .78rem; font-weight: 700;
 }
-.form-error { color: #b3261e; margin: 0; min-height: 1.2em; font-size: .9rem; }
+.form-error { color: var(--danger); margin: 0; min-height: 1.2em; font-size: .9rem; }
 .actions { display: flex; gap: 8px; justify-content: flex-start; flex-wrap: wrap; }
 
 .btn {
@@ -197,13 +197,13 @@ dialog input {
   box-shadow: none; border-color: var(--border);
 }
 .btn.small { padding: 10px 14px; font-size: .9em; min-height: var(--tap-min); }
-.btn.danger { background: #b3261e; color: #fff; box-shadow: none; }
+.btn.danger { background: var(--danger); color: var(--on-danger); box-shadow: none; }
 .btn.link { background: transparent; color: var(--primary); border: 0; text-decoration: underline; box-shadow: none; }
 
 .toast {
   position: fixed; inset-inline: 12px; top: max(12px, env(safe-area-inset-top, 0px)); bottom: auto;
   margin: auto; max-width: 480px;
-  background: var(--success); color: #fff;
+  background: var(--success); color: var(--on-primary);
   padding: 12px 16px; border-radius: var(--radius-md);
   transform: translateY(-120%); transition: transform .25s, opacity .2s;
   z-index: 40; opacity: 0; visibility: hidden; pointer-events: none; min-height: 0;
@@ -211,7 +211,7 @@ dialog input {
 }
 .toast:empty, .toast:not(.show) { opacity: 0; visibility: hidden; pointer-events: none; padding: 0; min-height: 0; transform: translateY(-120%); }
 .toast.show:not(:empty) { transform: none; opacity: 1; visibility: visible; pointer-events: auto; padding: 12px 16px; }
-.toast.err { background: #b3261e; }
+.toast.err { background: var(--danger); }
 .foot { text-align: center; color: var(--ink-soft); font-size: .8rem; padding: 20px; }
 .steps > li, .card { min-width: 0; }
 html, body { overflow-x: hidden; }
@@ -227,9 +227,9 @@ html, body { overflow-x: hidden; }
 .offer-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 #inbox h3 { margin: 8px 0 4px; font-size: 1em; }
 
-.manage-note { margin: 12px 0; border: 1px solid #c5e1a5; background: #f1f8e9; }
+.manage-note { margin: 12px 0; border: 1px solid var(--note-ok-border); background: var(--note-ok-bg); }
 .manage-note a { font-weight: 700; }
-.st-pending { opacity: .85; outline: 2px dashed #f0a000; }
+.st-pending { opacity: .85; outline: 2px dashed var(--pending-outline); }
 
 .auth-bar {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end;
@@ -247,17 +247,17 @@ html, body { overflow-x: hidden; }
   border: 1.5px solid var(--border) !important; font-weight: 700;
 }
 .btn.google {
-  background: #fff; color: #3c4043; border: 1px solid #dadce0;
+  background: var(--google-bg); color: var(--google-ink); border: 1px solid var(--google-border);
   box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
   font-weight: 600; display: inline-flex; align-items: center; gap: 10px;
   padding: 10px 16px; line-height: 1.2;
 }
-.btn.google:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,.35); }
-.btn.google:focus-visible { outline: 2px solid #4285f4; outline-offset: 2px; }
+.btn.google:hover { background: var(--google-bg-hover); box-shadow: 0 1px 3px rgba(60,64,67,.35); }
+.btn.google:focus-visible { outline: 2px solid var(--google-focus); outline-offset: 2px; }
 .btn.google .google-g { flex: 0 0 auto; display: block; }
-.top .btn.google { background: #fff; color: #3c4043; border-color: #dadce0; }
+.top .btn.google { background: var(--google-bg); color: var(--google-ink); border-color: var(--google-border); }
 .signin-card { border: 2px solid var(--primary); background: linear-gradient(180deg, var(--primary-soft), var(--surface)); }
-.signin-card .btn.google { border-color: #dadce0; }
+.signin-card .btn.google { border-color: var(--google-border); }
 .signin-msg { margin: 0 0 10px; font-weight: 700; color: var(--primary-d); }
 .signin-actions { justify-content: flex-start; }
 .muted.small { font-size: .85rem; }
