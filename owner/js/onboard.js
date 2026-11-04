@@ -604,8 +604,9 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         ? 'אפשר לשמור מזהה קריא מהשם, או להשאיר את האוטומטי.'
         : 'נשמור קישור קצר אוטומטי; אפשר לשנות כאן או בהגדרות.');
 
-    let checkTimer;
+    let checkTimer, checkSeq = 0;
     const check = async () => {
+      const seq = ++checkSeq;
       const slug = input.value.trim().toLowerCase();
       input.value = slug;
       if (!slug) {
@@ -622,6 +623,8 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       }
       try {
         const res = await rpc('owner_slug_available', { p_slug: slug, p_business_id: b.id });
+        // drop out-of-order responses: only the latest typed value may set the status
+        if (seq !== checkSeq || input.value.trim().toLowerCase() !== slug) return false;
         if (res === 'available') {
           // B4: scare only when replacing an already-custom (non auto b-*) slug.
           const customOld = liveSlug && !/^b-[a-f0-9]{12}$/.test(liveSlug);
@@ -640,6 +643,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
         status.className = 'form-error';
         return false;
       } catch (err) {
+        if (seq !== checkSeq) return false;
         status.textContent = heError(err);
         status.className = 'form-error';
         return false;
@@ -658,6 +662,7 @@ export async function renderOnboard(root, { user, onDone, onCancel }) {
       showErr(card, '');
       const slug = input.value.trim().toLowerCase();
       if (liveSlug && slug === liveSlug) { toast('הקישור כבר פעיל'); return; }
+      clearTimeout(checkTimer);   // a pending debounced check must not supersede this one
       if (!(await check())) return;
       saveSlug.disabled = true;
       try {
