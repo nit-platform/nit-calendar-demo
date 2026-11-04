@@ -1,0 +1,207 @@
+/**
+ * NIT design tokens — Direction Blue (approved)
+ * Source mockup: /workspace/nit-ux/styles/direction-blue.html
+ *
+ * Usage:
+ *   <html lang="he" dir="rtl" data-theme="blue">
+ *   <link rel="stylesheet" href="/tokens.css">
+ *
+ * Business theme: set data-theme from businesses.theme ('blue'|'teal'|'violet'|'graphite').
+ * Manifest / install chrome stay on blue defaults; update meta[name=theme-color] in JS on theme change.
+ */
+
+/* —— Shared structure (all themes) —— */
+:root {
+  /* Radius — soft rounded (Direction 1 structure) */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Typography */
+  --font-display: "Varela Round", "Heebo", system-ui, sans-serif;
+  --font-body: "Heebo", system-ui, sans-serif;
+
+  /* Motion */
+  --ease: 180ms ease-out;
+  --press-scale: 0.97;
+
+  /* Touch target */
+  --tap-min: 44px;
+
+  /* Dead-time fill (recommended slots) — shared amber across themes */
+  --fill: #E8A317;
+  --fill-bg: #FFF4DC;
+  --fill-ink: #2a1a00;
+  --fill-ink-soft: #8a5a00;
+
+  /* Danger / warning (owner banners, cancelled tags) — shared */
+  --danger: #B3261E;
+  --danger-bg: #F6D6D4;
+  --warn-bg: #FFF8E6;
+  --warn-bg-soft: #FFF4E5;
+  --warn-border: #F0D48A;
+  --warn-border-strong: #F0C36D;
+  --warn-ink: #5C4400;
+  --warn-ink-soft: #A15C00;
+
+  /* Shadows use --ink from the active theme */
+  --sh-sm: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent),
+           0 2px 8px color-mix(in srgb, var(--ink) 4%, transparent);
+  --sh-md: 0 4px 16px color-mix(in srgb, var(--ink) 8%, transparent);
+  --sh-cta: 0 4px 12px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+/* —— Theme: blue (default) ——
+   AA: primary on bg ~4.7:1 · ink ~16:1 · on-primary on primary ~4.8:1 · ink-soft ~5.5:1 */
+:root,
+[data-theme="blue"] {
+  --bg: #F5F8FC;
+  --page-bg: #DCE6F2;
+  --surface: #FFFFFF;
+  --surface-2: #E8F0FA;
+  --border: #C9D7EA;
+  --primary: #1D6FD8;
+  --primary-d: #1557B0;
+  --primary-soft: #DBEAFE;
+  --ink: #0F172A;
+  --ink-soft: #475569;
+  --busy: #C5CED9;
+  --success: #15803D;
+  --success-bg: #DCFCE7;
+  --on-primary: #FFFFFF;
+  --avatar-a: #93C5FD;
+  --avatar-b: #1D6FD8;
+  --buffer: #D9D9DE;
+  --wait-hatch: #E2EEFA;
+  --wait-border: #7AA7D6;
+  --wait-ink: #1F3A5F;
+  --tl-line: #E2E2E6;
+  --tl-hr: #ECECEF;
+  --tl-off-a: #F1F1F3;
+  --tl-off-b: #E6E6EA;
+  --tag-bg: #ECECEF;
+  --theme-name: "כחול";
+  --theme-color-meta: #1D6FD8;
+}
+
+/* —— Theme: teal ——
+   AA: primary on bg ~5.8:1 · ink ~10:1 · on-primary on primary ~5.5:1 */
+[data-theme="teal"] {
+  --bg: #F3FAF8;
+  --page-bg: #D5EBE5;
+  --surface: #FFFFFF;
+  --surface-2: #E0F2EE;
+  --border: #B5D4CC;
+  --primary: #0F766E;
+  --primary-d: #0A5C56;
+  --primary-soft: #CCFBF1;
+  --ink: #134E4A;
+  --ink-soft: #3F6863;
+  --busy: #C2D4D0;
+  --success: #15803D;
+  --success-bg: #DCFCE7;
+  --on-primary: #FFFFFF;
+  --avatar-a: #5EEAD4;
+  --avatar-b: #0F766E;
+  --buffer: #C9D6D2;
+  --wait-hatch: #D8F3EC;
+  --wait-border: #5BA89A;
+  --wait-ink: #134E4A;
+  --tl-line: #D5E0DC;
+  --tl-hr: #D5E0DC;
+  --tl-off-a: #E8F2EE;
+  --tl-off-b: #D5E5E0;
+  --tag-bg: #E0F2EE;
+  --theme-name: "טיל";
+  --theme-color-meta: #0F766E;
+}
+
+/* —— Theme: violet ——
+   AA: primary on bg ~5.9:1 · ink ~15:1 · on-primary on primary ~5.2:1 */
+[data-theme="violet"] {
+  --bg: #F7F5FC;
+  --page-bg: #E4DFF2;
+  --surface: #FFFFFF;
+  --surface-2: #EDE8F8;
+  --border: #D0C6E8;
+  --primary: #6D28D9;
+  --primary-d: #5B21B6;
+  --primary-soft: #EDE9FE;
+  --ink: #1E1B2E;
+  --ink-soft: #5B5670;
+  --busy: #CBC5D6;
+  --success: #15803D;
+  --success-bg: #DCFCE7;
+  --on-primary: #FFFFFF;
+  --avatar-a: #C4B5FD;
+  --avatar-b: #6D28D9;
+  --buffer: #D4CFE0;
+  --wait-hatch: #EDE8F8;
+  --wait-border: #A78BDB;
+  --wait-ink: #1E1B2E;
+  --tl-line: #DDD6EC;
+  --tl-hr: #DDD6EC;
+  --tl-off-a: #F0ECF8;
+  --tl-off-b: #E0D8F0;
+  --tag-bg: #EDE8F8;
+  --theme-name: "סגול";
+  --theme-color-meta: #6D28D9;
+}
+
+/* —— Theme: graphite ——
+   AA: primary/ink on bg ~16:1 · on-primary AAA · ink-soft ~5.6:1 */
+[data-theme="graphite"] {
+  --bg: #F4F4F5;
+  --page-bg: #D4D4D8;
+  --surface: #FFFFFF;
+  --surface-2: #E4E4E7;
+  --border: #D4D4D8;
+  --primary: #18181B;
+  --primary-d: #09090B;
+  --primary-soft: #E4E4E7;
+  --ink: #18181B;
+  --ink-soft: #52525B;
+  --busy: #C8C8CD;
+  --success: #15803D;
+  --success-bg: #DCFCE7;
+  --on-primary: #FFFFFF;
+  --avatar-a: #A1A1AA;
+  --avatar-b: #18181B;
+  --buffer: #D4D4D8;
+  --wait-hatch: #E4E4E7;
+  --wait-border: #A1A1AA;
+  --wait-ink: #18181B;
+  --tl-line: #D4D4D8;
+  --tl-hr: #D4D4D8;
+  --tl-off-a: #F4F4F5;
+  --tl-off-b: #E4E4E7;
+  --tag-bg: #E4E4E7;
+  --theme-name: "גרפיט";
+  --theme-color-meta: #18181B;
+}
+
+/* —— Reduced motion —— */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ease: 0ms;
+    --press-scale: 1;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
