@@ -4,6 +4,7 @@ import { sb, q, heError, hhmm } from './sb.js';
 import { h, toast, DEFAULT_PROVIDER_LABEL, providerLabel } from '../../js/ui.js';
 import { reloadContext } from './app.js';
 import { renderBookingLink } from './bookinglink.js';
+import { THEMES, THEME_META, THEME_LABELS, THEME_PREVIEWS, normalizeTheme, applyTheme } from '../../js/theme.js';
 
 // [column, label, type, extra]
 const BOOKING_FIELDS = [
@@ -61,6 +62,81 @@ function section(id, title, fieldDefs, policies, { open = true } = {}) {
   return h('details', { class: 'settings-sec', id, open: open ? '' : undefined },
     h('summary', {}, title),
     h('div', { class: 'sec-body list' }, fields.map((f) => input(f, policies[f[0]]))));
+}
+
+
+function renderThemePicker(ctx) {
+  const b = ctx.business;
+  const canEdit = !ctx.role || ctx.role === 'owner';
+  let selected = normalizeTheme(b.theme);
+  applyTheme(selected);
+
+  const options = THEMES.map((id) => {
+    const [c0, c1, c2, c3] = THEME_PREVIEWS[id];
+    const btn = h('button', {
+      type: 'button', class: 'theme-option' + (id === selected ? ' selected' : ''),
+      'aria-pressed': String(id === selected), 'data-theme-id': id, disabled: canEdit ? undefined : true,
+    },
+      h('div', { class: 'preview-bar', 'aria-hidden': 'true' },
+        h('i', { style: `background:${c0}` }), h('i', { style: `background:${c1}` }),
+        h('i', { style: `background:${c2}` }), h('i', { style: `background:${c3}` })),
+      h('span', { class: 't-name' }, THEME_LABELS[id]),
+      h('span', { class: 't-hex' }, THEME_META[id]));
+    return btn;
+  });
+
+  const preview = h('div', { class: 'mini-preview', id: 'theme-mini-preview' },
+    h('div', { class: 'mp-label' }, 'תצוגה מקדימה'),
+    h('div', { class: 'mp-row' },
+      h('span', { class: 'mp-chip' }, 'נבחר'),
+      h('span', { class: 'mp-chip ghost' }, 'רגיל'),
+      h('span', { class: 'mp-slot' }, '10:30')));
+
+  const saveBtn = h('button', { class: 'btn primary', type: 'button', id: 'theme-save', disabled: canEdit ? undefined : true },
+    'שמירת ערכת הצבע');
+  const block = h('div', { class: 'card settings-block', id: 'theme-picker' },
+    h('h3', {}, 'ערכת צבע'),
+    h('p', { class: 'hint' }, 'הלקוחות רואים את ערכת הצבע בדף ההזמנה. בחרו ערכה ולחצו שמירה.'),
+    h('div', { class: 'theme-options', role: 'group', 'aria-label': 'בחירת ערכת צבע' }, ...options),
+    preview,
+    canEdit ? null : h('p', { class: 'muted' }, NON_OWNER_NOTE),
+    h('div', { class: 'actions' }, saveBtn));
+
+  const syncSelected = () => {
+    for (const btn of block.querySelectorAll('.theme-option')) {
+      const on = btn.getAttribute('data-theme-id') === selected;
+      btn.classList.toggle('selected', on);
+      btn.setAttribute('aria-pressed', String(on));
+    }
+    applyTheme(selected);
+  };
+
+  for (const btn of options) {
+    btn.addEventListener('click', () => {
+      if (!canEdit) return;
+      selected = btn.getAttribute('data-theme-id');
+      syncSelected();
+    });
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    if (!canEdit) return;
+    const theme = normalizeTheme(selected);
+    try {
+      const [row] = await q(sb.from('businesses').update({ theme }).eq('id', b.id).select('*'));
+      if (!row) throw new Error('permission denied');
+      Object.assign(ctx.business, row);
+      selected = normalizeTheme(row.theme);
+      syncSelected();
+      toast('ערכת הצבע נשמרה');
+    } catch (err) {
+      toast(heError(err), true);
+      selected = normalizeTheme(b.theme);
+      syncSelected();
+    }
+  });
+
+  return block;
 }
 
 export async function renderSettings(root, ctx) {
@@ -133,6 +209,6 @@ export async function renderSettings(root, ctx) {
       if (!rows.length) throw new Error('permission denied'); await reloadContext(); toast('ההגדרות נשמרו'); }
     catch (err) { toast(heError(err), true); } });
 
-  // Order (K4): booking link → business details → policy sections. Holiday calendar list lives on Days (B8).
-  root.replaceChildren(renderBookingLink(ctx), bizForm, polForm);
+  // Order (K4): booking link → business details → theme → policy sections. Holiday calendar list lives on Days (B8).
+  root.replaceChildren(renderBookingLink(ctx), bizForm, renderThemePicker(ctx), polForm);
 }

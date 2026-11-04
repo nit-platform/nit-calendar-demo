@@ -1,5 +1,6 @@
 // Owner dashboard entry: auth (email OTP / Google), business context, tabs.
 import { sb, q, rpc, heError, ownerUrl } from './sb.js';
+import { applyTheme } from '../../js/theme.js';
 import { initCaptcha, captchaToken, resetCaptcha } from './captcha.js';
 import { $, h, toast } from '../../js/ui.js';
 import { renderCalendar } from './calendar.js';
@@ -222,6 +223,7 @@ async function enterDashboard(business) {
   ctx.business = business;
   localStorage.setItem('nit-owner-business', business.id);
   await reloadContext();
+  applyTheme(ctx.business.theme);
   $('#biz-name').textContent = ctx.business.name;
   document.title = `${ctx.business.name} – ניהול`;
   $('#tabs-wrap').classList.remove('hidden');
